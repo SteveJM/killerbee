@@ -50,6 +50,12 @@ commands:
 # python setup.py install
 ```
 
+On Mac OSX systems, you can install with the following:
+```
+$ brew install libgcrypt libusb
+$ pip install pyusb pycrypto
+```
+
 The python-dev and libgcrypt are required for the Scapy Extension Patch.
 
 Also note that this is a fairly advanced and un-friendly attack platform.  This
@@ -127,7 +133,7 @@ We have not tested nor do we endorse any specific "clone".
 Atmel RZ RAVEN USB Stick:
 ----------------
 See http://www.atmel.com/tools/RZUSBSTICK.aspx.
-This hardware 
+This hardware
 is convenient as the base firmware is open source with a freely-available IDE.
 The KillerBee firmware for the RZ RAVEN included in the `firmware/` directory is
 a modified version of the stock firmware distributed by Atmel to include
@@ -170,7 +176,7 @@ summarized below.
 
 + zbid         -  Identifies available interfaces that can be used by KillerBee
                 and associated tools.
-+ zbwireshark  -  Similar to zbdump but exposes a named pipe for real-time 
++ zbwireshark  -  Similar to zbdump but exposes a named pipe for real-time
                 capture and viewing in Wireshark.
 + zbdump       -  A tcpdump-like took to capture IEEE 802.15.4 frames to a libpcap
                 or Daintree SNA packet capture file.  Does not display real-time
@@ -200,8 +206,8 @@ summarized below.
                 a target device.  May be able to reset the device's PAN ID or Channel
 + zbfakebeacon  -  Spoofs beacon frames, either spamming them or on response to seeing
                 a beacon request come through.
-+ zbopenear    -  Assists in data capture where devices are operating on multiple 
-                channels or fast-frequency-hopping. It assigns multiple 
++ zbopenear    -  Assists in data capture where devices are operating on multiple
+                channels or fast-frequency-hopping. It assigns multiple
                 interfaces sequentially across all channels.
 + zbassocflood -  Repeatedly associate to the target PANID in an effort to cause
                 the device to crash from too many connected stations.
@@ -228,10 +234,10 @@ summarized below.
                 must be in binary format (obj hexfile's are not supported). To
                 convert from the hexfile format to a binary file, use the
                 objcopy tool: objcopy -I ihex -O binary mem.hex mem.bin
-+ zbwardrive   -	Discovers available interfaces and uses one to inject beacon 
++ zbwardrive   -	Discovers available interfaces and uses one to inject beacon
                 requests and listen for respones across channels. Once a network
                 is found on a channel, it assigns another device to continuously
-                capture traffic on that channel to a PCAP file. Scapy must be 
+                capture traffic on that channel to a PCAP file. Scapy must be
                 installed to run this.
 + zbscapy      -  Provides an interactive Scapy shell for interacting via a
                 KillerBee interface. Scapy must be installed to run this.
@@ -249,7 +255,7 @@ interface or a supported packet capture file (libpcap or Daintree SNA), and for
 injecting arbitrary packets.  Helper functions including IEEE 802.15.4, ZigBee
 NWK and ZigBee APS packet decoders are available as well.
 
-The KillerBee API is documented in epydoc format, with HTML documentation in 
+The KillerBee API is documented in epydoc format, with HTML documentation in
 the doc/ directory of this distribution.  If you have epydoc installed, you can
 also generate a convenient PDF for printing, if desired, as shown:
 

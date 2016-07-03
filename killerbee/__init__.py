@@ -45,7 +45,7 @@ def show_dev(vendor=None, product=None, gps=None, include=None):
     print((fmt.format("Dev", "Product String", "Serial Number")))
     for dev in kbutils.devlist(vendor=vendor, product=product, gps=gps, include=include):
         # Using None as a format value is an TypeError in python3
-        print((fmt.format(dev[0], dev[1], str(dev[2]))))
+        print(fmt.format(dev[0], dev[1], str(dev[2])))
 
 # KillerBee Class
 class KillerBee:
@@ -190,8 +190,8 @@ class KillerBee:
     def __device_is(self, vendorId, productId):
         '''
         Compares KillerBee class' device data to a known USB vendorId and productId
-        @type vendorId: 
-        @type productId: 
+        @type vendorId:
+        @type productId:
         @rtype: Boolean
         @return: True if KillerBee class has device matching the vendor and product IDs provided.
         '''
