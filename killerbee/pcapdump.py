@@ -72,7 +72,7 @@ class PcapReader:
         Wrapper for pcap_next to mimic method for Daintree SNA.  See pcap_next()
         '''
         return self.pcap_next()
- 
+
     def pcap_next(self):
         '''
         Retrieves the next packet from the capture file.  Returns a list of
@@ -91,8 +91,8 @@ class PcapReader:
             return [None,None]
 
         rechdr = [
-                float("%s.%s"%(rechdrtmp[0],rechdrtmp[1])), 
-                rechdrtmp[2], 
+                float("%s.%s"%(rechdrtmp[0],rechdrtmp[1])),
+                rechdrtmp[2],
                 rechdrtmp[3]
                 ]
         if rechdr[1] > rechdr[2] or rechdr[1] > self._pcaphsnaplen or rechdr[2] > self._pcaphsnaplen:
@@ -127,7 +127,7 @@ class PcapDumper:
 
         self.datalink = datalink
         self.__fh.write(b"".join([
-            struct.pack("I", PCAPH_MAGIC_NUM), 
+            struct.pack("I", PCAPH_MAGIC_NUM),
             struct.pack("H", PCAPH_VER_MAJOR),
             struct.pack("H", PCAPH_VER_MINOR),
             struct.pack("I", PCAPH_THISZONE),
@@ -143,7 +143,7 @@ class PcapDumper:
         self.close()
 
     #TODO: fix freq_mhz for subGHz which end up as float
-    def pcap_dump(self, packet, ts_sec=None, ts_usec=None, orig_len=None, 
+    def pcap_dump(self, packet, ts_sec=None, ts_usec=None, orig_len=None,
                   freq_mhz = None, ant_dbm = None, location = None):
         '''
         Appends a new packet to the libpcap file.  Optionally specify ts_sec
@@ -228,9 +228,9 @@ class PcapDumper:
                 struct.pack("<I", self.datalink) #Field
                 ])
 
-        if ts_sec == None or ts_usec == None: 
-            dt = datetime.now() 
-            ts_sec = int(dt.strftime('%s')) 
+        if ts_sec == None or ts_usec == None:
+            dt = datetime.now()
+            ts_sec = int(dt.strftime('%s'))
             ts_usec = dt.microsecond
 
         plen = len(packet)

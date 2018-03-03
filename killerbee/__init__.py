@@ -41,11 +41,10 @@ def show_dev(vendor=None, product=None, gps=None, include=None):
     @param include: Provide device names in this argument if you would like only
         these to be enumerated. Aka, include only these items.
     '''
-    fmt = "{: >14} {: <20} {: >10}"
-    print((fmt.format("Dev", "Product String", "Serial Number")))
+    fmt_str = "{: >14} {: <20} {: >10}"
+    print(fmt_str.format("Dev", "Product String", "Serial Number"))
     for dev in kbutils.devlist(vendor=vendor, product=product, gps=gps, include=include):
-        # Using None as a format value is an TypeError in python3
-        print(fmt.format(dev[0], dev[1], str(dev[2])))
+        print(fmt_str.format(dev[0], dev[1], dev[2] if dev[2] is not None else ""))
 
 # KillerBee Class
 class KillerBee:
