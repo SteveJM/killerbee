@@ -9,6 +9,7 @@ except ImportError:
     print("No setuptools found, attempting to use distutils instead.")
     from distutils.core import setup, Extension
 
+
 err = []
 warn = []
 apt_get_pkgs = []
