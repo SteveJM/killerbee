@@ -11,7 +11,11 @@ All Rights Reserved.
 
 The main toolkit was/is authored by:
 + 2009, Joshua Wright <jwright@willhackforsushi.com>
+<<<<<<< HEAD
 + 2010-2019, Ryan Speers <ryan@riverloopsecurity.com>
+=======
++ 2010-2018, Ryan Speers <ryan@riverloopsecurity.com>
+>>>>>>> Updated subtitle to Adam's suggestion, fixed merge
 + 2010-2011, Ricky Melgares <ricky@riverloopsecurity.com>
 
 We appreciate the many contributers to the framework, including the following who have contributed capabilities:
