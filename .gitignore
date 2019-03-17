@@ -3,5 +3,7 @@
 build/
 dist/
 pdf/
+launch.json
+settings.json
 .DS_Store
 *.egg-info/

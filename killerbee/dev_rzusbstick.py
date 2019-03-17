@@ -62,7 +62,7 @@ RZ_RESP_PRITMITIVE_UNKNOWN  = 0x8C #: RZUSB Response: Primitive Unknown Error
 RZ_RESP_COMMAND_UNKNOWN     = 0x8D #: RZUSB Response: Command Unknown Error
 RZ_RESP_BUSY_SCANING        = 0x8E #: RZUSB Response: Busy Scanning Error
 RZ_RESP_BUSY_CAPTURING      = 0x8F #: RZUSB Response: Busy Capturing Error
-RZ_RESP_OUT_OF_MEMORY       = 0x90 #: RZUSB Response: Out of Memory Error 
+RZ_RESP_OUT_OF_MEMORY       = 0x90 #: RZUSB Response: Out of Memory Error
 RZ_RESP_BUSY_JAMMING        = 0x91 #: RZUSB Response: Busy Jamming Error
 RZ_RESP_NOT_INITIALIZED     = 0x92 #: RZUSB Response: Not Initialized Error
 RZ_RESP_NOT_IMPLEMENTED     = 0x93 #: RZUSB Response: Opcode Not Implemented Error
@@ -263,7 +263,7 @@ class RZUSBSTICK:
     def __usb_read(self):
         '''
         Read data from the USB device opened as self.handle.
-        
+
         @rtype: String
         @param data: The data received from the USB endpoint
         '''
@@ -292,7 +292,7 @@ class RZUSBSTICK:
     def __usb_write(self, endpoint, data, expected_response=RZ_RESP_SUCCESS):
         '''
         Write data to the USB device opened as self.handle.
-        
+
         @type endpoint: Integer
         @param endpoint: The USB endpoint to write to
         @param expected_response: The desired response - defaults to RZ_RESP_SUCCESS
@@ -527,7 +527,7 @@ class RZUSBSTICK:
         packet += "\x00\x00"
 
         for pnum in xrange(count):
-            # Format for packet is opcode RZ_CMD_INJECT_FRAME, one-byte length, 
+            # Format for packet is opcode RZ_CMD_INJECT_FRAME, one-byte length,
             # packet data
             self.__usb_write(RZ_USB_COMMAND_EP, struct.pack("BB", RZ_CMD_INJECT_FRAME, len(packet)) + packet)
             time.sleep(delay)
@@ -541,9 +541,19 @@ class RZUSBSTICK:
         @rtype: List
         @return: Returns None is timeout expires and no packet received.  When a packet is received, a list is returned, in the form [ String: packet contents | Bool: Valid CRC | Int: Unscaled RSSI ]
         '''
+        retries = 3
+        while retries > 0 and self.__stream_open == False:
+            try:
+                # Turn the sniffer on
+                self.sniffer_on()
+            except:
+                # Sometimes this fails to initialise the USB device
+                print("Failed to enable sniffer, retrying...")
+                retries -= 1
+                pass
         if self.__stream_open == False:
-            # Turn the sniffer on
-            self.sniffer_on()
+            print("Failed to enable sniffer")
+            return None
 
         ret = None
         framedata = []

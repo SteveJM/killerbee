@@ -84,12 +84,7 @@ def response_handler(stumbled, packet, channel):
         value = [spanid, source, extpanid, stackprofilever, channel]
         if not key in stumbled:
             if args.verbose:
-                if assocPermit:
-                    print("Beacon represents new network - ### Permitting new associations ###.")
-                else:
-                    print("Beacon represents new network - not accepting new associations.")
-                #print hexdump(packet)
-                #print pktdecode
+                print("Beacon represents new network - Association Permit: " + assocPermit)
             stumbled[key] = value
             display_details(value)
         else:
