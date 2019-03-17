@@ -1,0 +1,208 @@
+#!/usr/bin/env python
+from killerbee.scapy_extensions import *
+from killerbee.kbutils import *
+from zigbee_crypt import *
+from optparse import OptionParser
+
+ZBEE_SEC_ENC_MIC_32 = 0x5  #: ZigBee Seecurity Level id 5; Encrypted, 4 byte MIC
+
+APS_CMD = [
+    "Unknown",
+    "SKKE 1",
+    "SKKE 2",
+    "SKKE 3",
+    "SKKE 4",
+    "Transport Key",
+    "Update Device"
+]
+
+KEY_TYPE = [
+    "Trust Center",
+    "Network",
+    "Application Master",
+    "Aplication Link",
+    "Trust Link",
+    "High Security Network"
+]
+
+COMMAND = [
+    "0 - Unknown",
+    "Route Request",
+    "2 - Unknown",
+    "3 - Unknown",
+    "4 - Unknown",
+    "5 - Unknown",
+    "6 - Unknown",
+    "7 - Unknown",
+    "Link Status",
+    "9 - Unknown",
+    "10 - Unknown",
+    "11 - Unknown",
+    "12 - Unknown"
+]
+
+def sniffNetworkKey(pkts, key, verbose):
+    addrMap = dict()
+    keyHash = sec_key_hash(key, '\0')
+    index = 0
+
+    for p in pkts:
+        index += 1
+        print("Raw Packet:")
+        print(hexdump(raw(p)))
+        if p.fcf_frametype == 0:
+            # FCF Beacon
+            if p.sf_assocpermit:
+                print("[+] " + str(index) + " Beacon - allowing join Seq:" + str(p.seqnum))
+            else:
+                print("[+] " + str(index) + " Beacon Seq:" + str(p.seqnum))
+        elif p.fcf_frametype == 2:
+            # FCF Ack
+            print("[+] " + str(index) + " Ack Seq:" + str(p.seqnum))
+        elif p.fcf_frametype == 3:
+            # FCF Comnmand
+            if p.cmd_id == 1:
+                print("[+] " + str(index) + " Association Request Seq:" + str(p.seqnum))
+            elif p.cmd_id == 2:
+                print("[+] " + str(index) + " Association Response Seq:" + str(p.seqnum))
+            elif p.cmd_id == 4:
+                print("[+] " + str(index) + " Data Request Seq:" + str(p.seqnum))
+            elif p.cmd_id == 7:
+                print("[+] " + str(index) + " Beacon Request Seq:" + str(p.seqnum))
+            else:
+                print("[-] " + str(index) + " Unknown command Seq:" + str(p.seqnum))
+        elif p.fcf_frametype == 1:
+            # FCF Data
+            print("[+] " + str(index) + " Data Seq:" + str(p.seqnum))
+            if p.haslayer("ZigbeeNWK"):
+                nwk = p.getlayer("ZigbeeNWK")
+                if nwk.source is not None and nwk.ext_src is not None:
+                    if not nwk.source in addrMap and verbose:
+                        print("    [+] Extended Source: " + ":".join("{:02x}".format(ord(ch)) for ch in raw(nwk)[8:16]) + " mapped to " + hex(nwk.source))
+                    addrMap[nwk.source] = raw(nwk)[8:16]
+                if p.haslayer("ZigbeeSecurityHeader"):
+                    sec = p.getlayer("ZigbeeSecurityHeader")
+                    if p.haslayer("ZigbeeAppDataPayload"):
+                        if sec.key_type < 6:
+                            if nwk.source in addrMap:
+                                data = raw(p.getlayer("ZigbeeAppDataPayload"))
+                                scf = (ord(data[2]) & ~ ZBEE_SEC_ENC_MIC_32) | ZBEE_SEC_ENC_MIC_32
+                                a = data[0:2] + chr(scf) + data[3:7]
+                                c = data[7:-4]
+                                mic = data[-4:]
+                                nonce = addrMap[nwk.source] + data[3:7] + chr(scf)
+                                decrypted, success = decrypt_ccm(keyHash, nonce, mic, c, a)
+                                if success:
+                                    print("    [+] Decrypted:")
+                                    if ord(decrypted[0]) < len(APS_CMD):
+                                        print("    APS Command: " + APS_CMD[ord(decrypted[0])])
+                                    if ord(decrypted[1]) < len(KEY_TYPE):
+                                        print("    Key Type: " + KEY_TYPE[ord(decrypted[1])])
+                                    print("    Value: " + ":".join("{:02x}".format(ord(ch)) for ch in decrypted[2:18]))
+                                else:
+                                    print("    [-] Decrypt failed - Wrong Key ???")
+                            else:
+                                print("    [-] There was no ext_src mapping for: " + str(nwk.source))
+                        else:
+                            print("    [-] Unexpected key_type", str(sec.key_type))
+                    else:
+                        if sec.key_type == 1:   # Network Key
+                            key = "\xaf\xfb\x55\xe7\xa1\xde\x20\xbd\x40\x7a\x8b\xe4\x1d\xd9\x31\xa2"
+                            #print("Key:")
+                            #print(hexdump(key))
+                            data = raw(nwk)
+                            offset = 14             # Base Contents of Header
+                            nwkHdrLen = 8
+                            if nwk.ext_src:
+                                offset += 8
+                                nwkHdrLen += 8
+                            if p.extended_nonce:
+                                offset += 8
+                            #print("Offset: " + str(offset))
+                            #print("Raw Data:")
+                            #print(hexdump(data))
+                            scf = (ord(raw(sec)[0]) & ~ ZBEE_SEC_ENC_MIC_32) | ZBEE_SEC_ENC_MIC_32
+                            a = data[0:nwkHdrLen] + chr(scf) + raw(sec)[1:offset-nwkHdrLen]
+                            #print("a:")
+                            #print(hexdump(a))
+                            c = data[offset:-4]
+                            #print("    Data Length: " + str(len(c)))
+                            #print("c:")
+                            #print(hexdump(c))
+                            mic = data[-4:]
+                            #print("mic:")
+                            #print(hexdump(mic))
+                            if nwk.ext_src:
+                                nonce = raw(nwk)[8:16] + raw(sec)[1:5] + '\x2d'
+                            elif nwk.source in addrMap:
+                                nonce = addrMap[nwk.source] + raw(sec)[1:5] + '\x2d'
+                            else:
+                                print("    [-] There was no ext_src mapping for: " + str(nwk.source))
+                                continue
+                            #print("nonce:")
+                            #print(hexdump(nonce))
+                            decrypted, success = decrypt_ccm(key, nonce, mic, c, a)
+                            if success:
+                                print("    [+] Decrypted:")
+                                if ord(decrypted[0]) < len(COMMAND):
+                                    print("    Command: " + COMMAND[ord(decrypted[0])])
+                                else:
+                                    print("    Unknown Command: " + str(ord(decrypted[0])))
+                                print("    Data: " + ":".join("{:02x}".format(ord(ch)) for ch in decrypted[1:]))
+                            else:
+                                print("    [-] Decrypt failed - Wrong Key ???")
+                        else:
+                            print("    [*] Unexpected key_type: " + str(sec.key_type))
+                else:
+                    print("    [-] No Zigbee Security Header")
+            else:
+                print("[-] " + str(index) + " No Zigbee NWK Layer")
+        else:
+            print("[-] " + str(index) + " Unknown FCF FrameType")
+
+
+if __name__ == '__main__':
+    # Define the command line options.
+    parser = OptionParser(description="zbanalyse: Decode PCAP contents using Zigbee Nwtwork key " +
+        "to decrypt data. Will process libpcap or Daintree SNA capture files.")
+    parser.add_option("-f", "--file", dest="filename",
+                    help="PCap file to process", metavar="FILE")
+    parser.add_option("-d", "--dir", dest="directory",
+                    help="Directory of PCap files to process", metavar="DIR")
+    parser.add_option("-k", "--transport-key", dest="transportKey",
+                    help="Transport Key for decryption")
+    parser.add_option("-v", "--verbose",
+                    action="store_true", dest="verbose", default=False,
+                    help="Print detailed status messages to stdout")
+
+    (options, args) = parser.parse_args()
+
+    if (not options.filename and not options.directory):
+        print("A packet capture file or directory must be specified")
+        sys.exit(1)
+
+    if (not options.transportKey):
+        print("A transport key value must be specified")
+        sys.exit(1)
+
+    files = []
+    if options.filename:
+        files.append(options.filename)
+
+    if options.directory:
+        files += glob.glob(os.path.join(options.directory, "*.pcap"))
+
+    filecount = 0
+
+    for file in files:
+        print "Processing %s"%file
+        if not os.path.exists(str(file)):
+            print >>sys.stderr, "ERROR: Input file \"%s\" does not exist." % file
+            sys.exit(1)
+
+        filecount += 1
+        pkts = kbrdpcap(file)
+        sniffNetworkKey(pkts, options.transportKey, options.verbose)
+
+
+    print "[+] Processed %d capture files." % filecount
