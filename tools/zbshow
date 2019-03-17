@@ -1,0 +1,139 @@
+#!/usr/bin/env python
+from datetime import datetime
+from killerbee.scapy_extensions import *
+from killerbee.kbutils import *
+from zigbee_crypt import *
+from optparse import OptionParser
+
+
+APS_CMD = [
+    "Unknown",
+    "SKKE 1",
+    "SKKE 2",
+    "SKKE 3",
+    "SKKE 4",
+    "Transport Key",
+    "Update Device"
+]
+
+KEY_TYPE = [
+    "Trust Center",
+    "Network",
+    "Application Master",
+    "Aplication Link",
+    "Trust Link",
+    "High Security Network"
+]
+
+COMMAND = [
+    "0 - Unknown",
+    "Route Request",
+    "2 - Unknown",
+    "3 - Unknown",
+    "4 - Unknown",
+    "5 - Unknown",
+    "6 - Unknown",
+    "7 - Unknown",
+    "Link Status",
+    "9 - Unknown",
+    "10 - Unknown",
+    "11 - Unknown",
+    "12 - Unknown"
+]
+
+def showPkts(pkts, verbose):
+    addrMap = dict()
+    index = 0
+
+    for p in pkts:
+        index += 1
+        #out = str(index) + " " + datetime.utcfromtimestamp(p.time).strftime("%d-%m-%YT%H:%M:%S.%f") + \
+        out = str(index) + " " + str(p.time) + \
+              " " + hex(pkts[1].src_addr) + " " + hex(pkts[1].dest_addr) + " " + str(p.seqnum) + " "
+        if p.fcf_frametype == 0:
+            # FCF Beacon
+            if p.haslayer("Raw"):
+                print(out + "Bad Becone: Raw Bytes: ", str(len(p.getlayer("Raw"))))
+            elif p.sf_assocpermit:
+                print(out + "Beacon - allowing join")
+            else:
+                print(out + "Beacon")
+        elif p.fcf_frametype == 2:
+            # FCF Ack
+            print(out + " Ack" )
+        elif p.fcf_frametype == 3:
+            # FCF Comnmand
+            #if p.hasAttribute("cmd_id"):
+            #    print("[-] " + str(index) + " Unknown Command ???")
+            if (p.haslayer("Dot15d4Cmd")):
+                if p.cmd_id == 1:
+                    print(out + "Association Request")
+                elif p.cmd_id == 2:
+                    print(out + "Association Response")
+                elif p.cmd_id == 4:
+                    print(out + "Data Request")
+                elif p.cmd_id == 7:
+                    print(out + "Beacon Request")
+                else:
+                    print(out + "Unknown command")
+            elif p.haslayer("Raw"):
+                print(out + "Unknown Cmd: Raw Bytes: ", str(len(p.getlayer("Raw"))))
+            else:
+                print(out + "Unknown Cmd: Empty")
+        elif p.fcf_frametype == 1:
+            # FCF Data
+            if p.haslayer("ZigbeeNWK"):
+                nwk = p.getlayer("ZigbeeNWK")
+                if nwk.source is not None and nwk.ext_src is not None:
+                    if not nwk.source in addrMap and verbose:
+                        out += "Extended Source: " + ":".join("{:02x}".format(ord(ch)) for ch in raw(nwk)[8:16])
+                    addrMap[nwk.source] = raw(nwk)[8:16]
+                if p.haslayer("ZigbeeSecurityHeader"):
+                    print(out + "ZigbeeSecurityHeader: " + str(len(raw(p.getlayer("ZigbeeSecurityHeader")))) + " bytes")
+                else:
+                    print(out + "No Zigbee Security Header")
+            else:
+                print(out + "No Zigbee NWK Layer")
+        else:
+            print(out + "Unknown FCF FrameType")
+
+
+if __name__ == '__main__':
+    # Define the command line options.
+    parser = OptionParser(description="zbshow: Show PCAP contents " +
+        "Will process libpcap or Daintree SNA capture files.")
+    parser.add_option("-f", "--file", dest="filename",
+                    help="PCap file to process", metavar="FILE")
+    parser.add_option("-d", "--dir", dest="directory",
+                    help="Directory of PCap files to process", metavar="DIR")
+    parser.add_option("-v", "--verbose",
+                    action="store_true", dest="verbose", default=False,
+                    help="Print detailed status messages to stdout")
+
+    (options, args) = parser.parse_args()
+
+    if (not options.filename and not options.directory):
+        print("A packet capture file or directory must be specified")
+        sys.exit(1)
+
+    files = []
+    if options.filename:
+        files.append(options.filename)
+
+    if options.directory:
+        files += glob.glob(os.path.join(options.directory, "*.pcap"))
+
+    filecount = 0
+
+    for file in files:
+        print("Processing %s"%file)
+        if not os.path.exists(str(file)):
+            print >>sys.stderr, "ERROR: Input file \"%s\" does not exist." % file
+            sys.exit(1)
+
+        filecount += 1
+        pkts = kbrdpcap(file)
+        showPkts(pkts, options.verbose)
+
+
+    print("[+] Processed %d capture files." % filecount)

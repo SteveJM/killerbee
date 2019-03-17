@@ -1,0 +1,291 @@
+#!/usr/bin/env python
+
+'''
+Requires TWO zigbee devices.
+Device 1: Is used to scan for active channels. This device must support
+packet injection.
+device 2: Is tasked with capturing packets for active channels. If the
+active channel changes then capturing will terminate and resume on the new channel.
+
+Captures are written in PCAP format to files named YYYYMMDD-HHMMSS-chanXX.pcap.
+'''
+
+import sys
+import os
+import signal
+import datetime
+import time
+import argparse
+import threading
+
+from killerbee import *
+
+txcount = 0
+rxcount = 0
+stumbled = {}
+active = None
+
+class captureThread(threading.Thread):
+    def __init__(self, args, pcapfile, channel):
+        threading.Thread.__init__(self)
+        self.channel = channel
+        self.pcapfile = pcapfile
+        self.args = args
+        self.shutdown_flag = threading.Event()
+
+    def run(self):
+        if self.args.pan_id_hex:
+            panid = int(args.pan_id_hex, 16)
+        else:
+            panid = 0
+
+        kb = KillerBee(device=self.args.pcapiface)
+        if not kb.is_valid_channel(self.channel, self.args.subghz_page):
+            print >>sys.stderr, "ERROR: Must specify a valid IEEE 802.15.4 channel for the selected device."
+            kb.close()
+        else:
+            kb.set_channel(self.channel)
+            kb.sniffer_on()
+
+            #rf_freq_mhz = (args.channel - 10) * 5 + 2400
+            rf_freq_mhz = kb.frequency(self.channel, self.args.subghz_page) / 1000.0
+            print("zbdump: listening on \'{0}\', channel {1}, page {2} ({3} MHz), link-type DLT_IEEE802_15_4, capture size 127 bytes".format(kb.get_dev_info()[0], self.channel, self.args.subghz_page, rf_freq_mhz))
+
+            pd = PcapDumper(DLT_IEEE802_15_4, self.pcapfile, ppi=self.args.ppi)
+            packetcount = 0
+
+            while not self.shutdown_flag.is_set():
+                packet = kb.pnext()
+                # packet[1] is True if CRC is correct, check removed to have promiscous capture regardless of CRC
+                # if PAN filter active, only process correct PAN or ACK
+                if packet and panid:
+                    pan, layer = kbgetpanid(Dot15d4FCS(packet['bytes']))
+                if packet != None and (not panid or panid == pan): # and packet[1]:
+                    packetcount += 1
+                    pd.pcap_dump(packet['bytes'], ant_dbm=packet['dbm'], freq_mhz=rf_freq_mhz)
+
+            kb.sniffer_off()
+            kb.close()
+            pd.close()
+
+        print("%d packets captured to %s" % (packetcount, self.pcapfile))
+
+
+class ServiceExit(Exception):
+    """
+    Custom exception which is used to trigger the clean exit
+    of all running threads and the main program.
+    """
+    pass
+
+
+def display_details(routerdata):
+    global args, csvfile
+    stackprofile_map = {0:"Network Specific",
+                        1:"ZigBee Standard",
+                        2:"ZigBee Enterprise"}
+    stackver_map = {0:"ZigBee Prototype",
+                    1:"ZigBee 2004",
+                    2:"ZigBee 2006/2007"}
+    spanid, source, extpanid, stackprofilever, channel = routerdata
+    stackprofile = ord(stackprofilever) & 0x0f
+    stackver = (ord(stackprofilever) & 0xf0) >>4
+
+    print("New Network: PANID 0x%02X%02X  Source 0x%02X%02X"%(ord(spanid[0]), ord(spanid[1]), ord(source[0]), ord(source[1])))
+
+    try:
+        extpanidstr=""
+        for ind in range(0,7):
+            extpanidstr += "%02x:"%ord(extpanid[ind])
+        extpanidstr += "%02X"%ord(extpanid[-1])
+        sys.stdout.write("\tExt PANID: " + extpanidstr)
+    except IndexError:
+        sys.stdout.write("\tExt PANID: Unknown")
+
+    try:
+        print("\tStack Profile: %s"%stackprofile_map[stackprofile])
+        stackprofilestr = stackprofile_map[stackprofile]
+    except KeyError:
+        print("\tStack Profile: Unknown (%d)"%stackprofile)
+        stackprofilestr = "Unknown (%d)"%stackprofile
+
+    try:
+        print("\tStack Version: {0}".format(stackver_map[stackver]))
+        stackverstr = stackver_map[stackprofile]
+    except KeyError:
+        print("\tStack Version: Unknown ({0})".format(stackver))
+        stackverstr = "Unknown (%d)"%stackver
+
+    print("\tChannel: {0}".format(channel))
+
+    if args.csvfile is not None:
+        csvfile.write("0x%02X%02X,0x%02X%02X,%s,%s,%s,%d\n"%(ord(spanid[0]), ord(spanid[1]), ord(source[0]), ord(source[1]), extpanidstr, stackprofilestr, stackverstr, channel))
+
+def response_handler(stumbled, packet, channel):
+    global args, active, activeChannel
+    d154 = Dot154PacketParser()
+    # Chop the packet up
+    pktdecode = d154.pktchop(packet)
+
+    # Byte-swap the frame control field
+    fcf = struct.unpack("<H", pktdecode[0])[0]
+
+    # Check if this is a beacon frame
+    if (fcf & DOT154_FCF_TYPE_MASK) == DOT154_FCF_TYPE_BEACON:
+        # The 6th element offset in the Dot154PacketParser.pktchop() method
+        # contains the beacon data in its own list.  Extract the Ext PAN ID.
+        spanid = pktdecode[4][::-1]
+        source = pktdecode[5][::-1]
+        beacondata = pktdecode[6]
+        extpanid = beacondata[6][::-1]
+        stackprofilever = beacondata[4]
+        assocPermit = "Unknown [Bad Packet]"
+        try:
+            if struct.unpack("<", beacondata[0])[0] & 0x8000:
+                assocPermit = "Yes"
+            else:
+                assocPermit = "No"
+        except:
+            pass
+
+        key = ''.join([spanid, source])
+        value = [spanid, source, extpanid, stackprofilever, channel]
+        if not key in stumbled:
+            if args.verbose:
+                print("Beacon represents new network - Association Permit: " + assocPermit)
+                #print hexdump(packet)
+                #print pktdecode
+            stumbled[key] = value
+            display_details(value)
+        else:
+            if args.verbose:
+                if assocPermit:
+                    print("Received frame is a beacon - ### Permitting new associations ###.")
+                else:
+                    print("Received frame is a beacon - not accepting new associations.")
+
+        if (active is None or activeChannel != channel):
+            if (active is not None):
+                print("Kill capture, wait for it to die.")
+                active.shutdown_flag.set()
+                active.join()
+                activeChannel = None
+
+            captureName = args.outdir + os.sep + str(datetime.now().strftime("%Y%m%d-%H%M%S-Chan") + "%02d" % (channel))
+            print("Start capture on channel %d to: %s" % (channel, captureName))
+            active = captureThread(args, captureName, channel)
+            active.start()
+            activeChannel = channel
+
+        return value
+
+    if args.verbose:
+        print("Received frame is not a beacon (FCF={0}).".format(pktdecode[0].encode('hex')))
+
+    return None
+
+def interrupt(signum, frame):
+    raise ServiceExit
+
+if __name__ == '__main__':
+    # Command-line arguments
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-1', '--scaniface', action='store', dest='scaniface')
+    parser.add_argument('-2', '--pcapifact', action='store', dest='pcapiface')
+    parser.add_argument('-g', '--gps', '--ignore', action='append', dest='ignore')
+    parser.add_argument('-o', '--outdir', action='store', dest='outdir')
+    parser.add_argument('-d', '--delay', action='store', type=float, dest='delay', default=2.0)
+    parser.add_argument('-p', '--ppi', action='store_true')
+    parser.add_argument('-P', '--pan_id_hex', action='store', default=None)
+    parser.add_argument('-s', '--subghz_page', action='store', type=int, default=0)
+    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('-w', '--file', action='store', dest='csvfile', default=None)
+    parser.add_argument('-D', action='store_true', dest='showdev')
+    args = parser.parse_args()
+
+    if args.showdev:
+        show_dev()
+        sys.exit(0)
+
+    if args.csvfile is not None:
+        try:
+            csvfile = open(args.csvfile, 'w')
+        except Exception as e:
+            print("Issue opening CSV output file: {0}.".format(e))
+        csvfile.write("panid,source,extpanid,stackprofile,stackversion,channel\n")
+
+    # Beacon frame
+    beacon = "\x03\x08\x00\xff\xff\xff\xff\x07"
+    # Immutable strings - split beacon around sequence number field
+    beaconp1 = beacon[0:2]
+    beaconp2 = beacon[3:]
+
+    try:
+        kbSniff = KillerBee(device=args.scaniface)
+    except KBInterfaceError as e:
+        print("Interface Error: {0}".format(e))
+        sys.exit(-1)
+
+    signal.signal(signal.SIGINT, interrupt)
+    print("zbstumbler: Scanning on interface \'{0}\'".format(kbSniff.get_dev_info()[0]))
+
+    # Sequence number of beacon request frame
+    seqnum = 0
+
+    # Start of Channel 11
+    channel = 11
+
+    try:
+        # Loop Scanning for an active Channel
+        while 1:
+            if channel > 26:
+                channel = 11
+
+            if seqnum > 255:
+                seqnum = 0
+
+            if args.verbose:
+                print("Setting channel to {0}.".format(channel))
+            try:
+                kbSniff.set_channel(channel)
+            except Exception, e:
+                print("ERROR: Failed to set channel to {0}. ({1})".format(channel, e))
+                sys.exit(-1)
+
+            if args.verbose:
+                print("Transmitting beacon request.")
+
+            beaconinj = ''.join([beaconp1, "%c" % seqnum, beaconp2])
+
+            # Process packets for arg_delay seconds looking for the beacon response frame.
+            start = time.time()
+
+            try:
+                txcount+=1
+                kbSniff.inject(beaconinj)
+            except Exception, e:
+                print("ERROR: Unable to inject packet: {0}".format(e))
+                sys.exit(-1)
+
+            while (start+args.delay > time.time()):
+                # Does not block
+                recvpkt = kbSniff.pnext()
+                # Check for empty packet (timeout) and valid FCS
+                if recvpkt != None and recvpkt[1]:
+                    rxcount += 1
+                    if args.verbose:
+                        print("Received frame.")#, time.time()-start
+                    networkdata = response_handler(stumbled, recvpkt[0], channel)
+
+            kbSniff.sniffer_off()
+            seqnum += 1
+            channel += 1
+
+    except ServiceExit:
+        active.shutdown_flag.set()
+        if args.csvfile is not None:
+            csvfile.close()
+        kbSniff.close()
+        active.join()
+        print("\n{0} packets transmitted, {1} responses.".format(txcount, rxcount))
+        sys.exit(0)
