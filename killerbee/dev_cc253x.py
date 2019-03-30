@@ -211,11 +211,10 @@ class CC253x:
         while True:
             pdata = None
             try:
-
                 pdata = self.dev.read(self._data_ep, self._maxPacketSize, timeout=timeout)
             except usb.core.USBError as e:
                 if e.errno != 110: #Operation timed out
-                    print "Error args:", e.args
+                    print("Error args:", e.args)
                     raise e
                     #TODO error handling enhancements for USB 1.0
                 else:
