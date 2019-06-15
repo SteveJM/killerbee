@@ -18,7 +18,10 @@ import datetime
 import time
 import argparse
 import threading
-import gpsPoll
+try:
+    import gpsPoll
+except:
+    print ('GPS module not found - not loading')
 
 from killerbee import *
 
@@ -268,9 +271,12 @@ if __name__ == '__main__':
         except Exception as e:
             print("Issue opening output log file: {0}.".format(e))
 
-    # Start the GPS Thread
-    gpsp = gpsPoll.GpsPoller()
-    gpsp.start()
+    if args.ignore[0] == 'IGNORE':
+        print('Ignoring GPS as instructed')
+    else:
+        # Start the GPS Thread
+        gpsp = gpsPoll.GpsPoller()
+        gpsp.start()
 
     beacon = "\x03\x08\x00\xff\xff\xff\xff\x07"
     # Immutable strings - split beacon around sequence number field
