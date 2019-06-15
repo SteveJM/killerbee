@@ -78,21 +78,24 @@ def response_handler(stumbled, packet, channel):
         beacondata = pktdecode[6]
         extpanid = beacondata[6][::-1]
         stackprofilever = beacondata[4]
-        assocPermit = struct.unpack("<H", beacondata[0])[0] & 0x8000
+        assocPermit = struct.unpack("<H", beacondata[0])[0] & 0x8000 == 0x8000
 
         key = ''.join([spanid, source])
         value = [spanid, source, extpanid, stackprofilever, channel]
         if not key in stumbled:
             if args.verbose:
-                print("Beacon represents new network - Association Permit: " + assocPermit)
+                if assocPermit:
+                    print("New Network Found! - ### Permitting new associations ###")
+                else:
+                    print("New Network found!")
             stumbled[key] = value
             display_details(value)
         else:
             if args.verbose:
                 if assocPermit:
-                    print("Received frame is a beacon - ### Permitting new associations ###.")
+                    print("Received beacon response - ### Permitting new associations ###.")
                 else:
-                    print("Received frame is a beacon - not accepting new associations.")
+                    print("Received beacon response.")
         return value
 
     if args.verbose:
