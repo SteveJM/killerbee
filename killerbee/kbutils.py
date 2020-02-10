@@ -289,7 +289,9 @@ def devlist(vendor=None, product=None, gps=None, include=None):
         if serialdev == gps_devstring:
             print("kbutils.devlist is skipping ignored/GPS device string {0}".format(serialdev)) #TODO remove debugging print
             continue
-        elif (DEV_ENABLE_SL_NODETEST and issl_nodetest(serialdev)):
+        elif (config.DEV_ENABLE_RASPBEE and is_raspbee(serialdev)):
+            devlist.append([serialdev, "Raspbee", "TODO"])  # TODO
+        elif (config.DEV_ENABLE_SL_NODETEST and issl_nodetest(serialdev)):
             devlist.append([serialdev, "Silabs NodeTest", ""])
         elif (DEV_ENABLE_SL_BEEHIVE and issl_beehive(serialdev)):
             devlist.append([serialdev, "BeeHive SG", ""])
@@ -346,6 +348,10 @@ def get_serial_ports(include=None):
     if include is not None:
         seriallist = list( set(seriallist).union(set(filter(isSerialDeviceString, include))) )
     return seriallist
+
+def is_raspbee(serialdev):
+    # TODO implement
+    return True
 
 def isgoodfetccspi(serialdev):
     '''
