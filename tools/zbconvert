@@ -56,5 +56,4 @@ while args.count != packetcount:
 
 incap.close()
 outcap.close()
-print(("Converted {0} packets.".format(packetcount)))
-
+print("Converted {0} packets.".format(packetcount))

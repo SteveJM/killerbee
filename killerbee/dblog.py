@@ -113,7 +113,7 @@ class DBLogger:
         if rssi != None: sql.append("rssi=%d" % rssi)
         if loc_id != None: sql.append("loc_id=%d" % loc_id)
         if channel != None: sql.append("channel=%d" % channel) # TODO: bug? why is this in here twice?
-        if page: sql.append("page=%d" % page) # TODO: bug? 
+        if page: sql.append("page=%d" % page) # TODO: bug?
         sql.append("fcf_panidcompress=%d" % scapy.fcf_panidcompress)
         sql.append("fcf_ackreq=%d" % scapy.fcf_ackreq)
         sql.append("fcf_pending=%d" % scapy.fcf_pending)

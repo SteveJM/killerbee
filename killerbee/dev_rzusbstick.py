@@ -61,7 +61,7 @@ RZ_RESP_PRITMITIVE_UNKNOWN  = 0x8C #: RZUSB Response: Primitive Unknown Error
 RZ_RESP_COMMAND_UNKNOWN     = 0x8D #: RZUSB Response: Command Unknown Error
 RZ_RESP_BUSY_SCANING        = 0x8E #: RZUSB Response: Busy Scanning Error
 RZ_RESP_BUSY_CAPTURING      = 0x8F #: RZUSB Response: Busy Capturing Error
-RZ_RESP_OUT_OF_MEMORY       = 0x90 #: RZUSB Response: Out of Memory Error 
+RZ_RESP_OUT_OF_MEMORY       = 0x90 #: RZUSB Response: Out of Memory Error
 RZ_RESP_BUSY_JAMMING        = 0x91 #: RZUSB Response: Busy Jamming Error
 RZ_RESP_NOT_INITIALIZED     = 0x92 #: RZUSB Response: Not Initialized Error
 RZ_RESP_NOT_IMPLEMENTED     = 0x93 #: RZUSB Response: Opcode Not Implemented Error
@@ -262,7 +262,7 @@ class RZUSBSTICK:
     def __usb_read(self):
         '''
         Read data from the USB device opened as self.handle.
-        
+
         @rtype: String
         @param data: The data received from the USB endpoint
         '''
@@ -289,7 +289,7 @@ class RZUSBSTICK:
     def __usb_write(self, endpoint, data, expected_response=RZ_RESP_SUCCESS):
         '''
         Write data to the USB device opened as self.handle.
-        
+
         @type endpoint: Integer
         @param endpoint: The USB endpoint to write to
         @param expected_response: The desired response - defaults to RZ_RESP_SUCCESS
@@ -494,7 +494,7 @@ class RZUSBSTICK:
     def inject(self, packet, channel=None, count=1, delay=0, page=0):
         '''
         Injects the specified packet contents.
-        @type packet: String
+        @type packet: Bytes
         @param packet: Packet contents to transmit, without FCS.
         @type channel: Integer
         @param channel: Sets the channel, optional
@@ -520,10 +520,10 @@ class RZUSBSTICK:
             self.set_channel(channel, page)
 
         # Append two bytes to be replaced with FCS by firmware.
-        packet += "\x00\x00"
+        packet += b"\x00\x00"
 
         for pnum in range(count):
-            # Format for packet is opcode RZ_CMD_INJECT_FRAME, one-byte length, 
+            # Format for packet is opcode RZ_CMD_INJECT_FRAME, one-byte length,
             # packet data
             self.__usb_write(RZ_USB_COMMAND_EP, struct.pack("BB", RZ_CMD_INJECT_FRAME, len(packet)) + packet)
             time.sleep(delay)
@@ -603,7 +603,7 @@ class RZUSBSTICK:
                 # The last byte of frame data is the link quality indicator
                 ret['lqi'] = framedata[-1]
                 # Convert the framedata to a string for the return value
-                ret[0] = ''.join(framedata[:-1])
+                ret[0] = b''.join(framedata[:-1])
                 ret['bytes'] = ret[0]
                 return ret
             else:

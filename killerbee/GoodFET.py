@@ -194,9 +194,9 @@ class GoodFET:
                     self.serialport.timeout = 0.2
                 elif attempts == 100:
                     print("Tried 100 times to connect and failed.")
-                    sys.stdout.write("Continuing to try forever.")  # No newline
+                    sys.stdout.write("Continuing to try forever.")	# No newline
                     sys.stdout.flush()
-                    self.verbose=True   # Something isn't going right, give the user more info
+                    self.verbose=True	# Something isn't going right, give the user more info
                 elif attempts > 100 and attempts % 10 == 0:
                     sys.stdout.write('.')
                     sys.stdout.flush()
@@ -241,8 +241,7 @@ class GoodFET:
             for foo in range(1,30):
                 if not self.monitorecho():
                     if self.verbose:
-                        print("Comm error on %i try, resyncing out of %s." % (foo,
-                                                                              clocking))
+                        print("Comm error on %i try, resyncing out of %s." % (foo, clocking))
                     connected=0
                     break
         if self.verbose: print("Connected after %02i attempts." % attempts)
@@ -425,6 +424,7 @@ class GoodFET:
 
     def readcmd(self):
         """Read a reply from the GoodFET."""
+        import serial
         while 1:#self.serialport.inWaiting(): # Loop while input data is available
             try:
                 self.app=ord(self.serialport.read(1))
@@ -772,4 +772,3 @@ class GoodFET:
     def loadsymbols(self):
         """Load symbols from a file."""
         return
-

@@ -240,25 +240,32 @@ def kbrdpcap(filename, count = -1, skip = 0, nofcs=False):
     if count > 0:
         count += skip
 
-    while 1:
-        packet = cap.pnext()
-        packetcount += 1
-        if packet[1] == None:
-            break
-        if skip > 0 and packetcount <= skip:
-            continue
-        if nofcs: packet = Dot15d4(packet[1])
-        else:     packet = Dot15d4FCS(packet[1])
-        lst.append(packet)
-        if count > 0 and packetcount >= count:
-            break
-    return plist.PacketList(lst, os.path.basename(filename))
+    try:
+        while 1:
+            packet = cap.pnext()
+            packetcount += 1
+            if packet[1] == None:
+                break
+            if skip > 0 and packetcount <= skip:
+                continue
+            if nofcs:
+                lst.append(Dot15d4(packet[1]))
+            else:
+                lst.append(Dot15d4FCS(packet[1]))
+            if count > 0 and packetcount >= count:
+                break
+    except StopIteration:
+        pass
+    finally:
+        cap.close()
+    return PacketList(lst, os.path.basename(filename))
 
 @conf.commands.register
 def kbwrpcap(save_file, pkts):
     """
     Write a pcap using the KillerBee library.
     """
+    from killerbee.pcapdlt import DLT_IEEE802_15_4
     pd = PcapDumper(DLT_IEEE802_15_4, save_file, ppi=False)
     for packet in pkts:
         pd.pcap_dump(bytes(packet))

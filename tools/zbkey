@@ -43,8 +43,8 @@ def associate_response_handle(packet):
     '''
     Handle the association response packet.
     We expect the FCF to be 0xCC63 and command type to be 0x02 (Assoc Resp)
-    @arg  packet 
-    @type packet 
+    @arg  packet
+    @type packet
     @return A string representing the device's short address in hex notation,
             or none if the packet was not the length or type expected.
     '''
@@ -58,7 +58,7 @@ def associate_response_handle(packet):
                 return None
             # Offset to Response Assigned Short Addr (in assoc response type)
             return packet[22:24] #device's short address, as binary string
-    return None   
+    return None
 
 
 def transport_response_handle(packet):
@@ -66,8 +66,8 @@ def transport_response_handle(packet):
     '''
     Handle the transport response packet.
     We expect the FCF to be 0x8861 and the command type to be 0x05 (Data)
-    @arg  packet 
-    @type packet 
+    @arg  packet
+    @type packet
     @return A string representing the key in hex notation,
             or none if the packet was not the length or type expected.
     '''
@@ -178,7 +178,7 @@ kb.inject(data_assoc_packet)
 # receiving the association response and setting the device_short_address
 value = None
 start = time.time()
-while (start+arg_delay > time.time()):		
+while (start+arg_delay > time.time()):
     # Does not block
     recvpkt = kb.pnext()
     # Check for empty packet (timeout) and valid FCS
@@ -210,11 +210,11 @@ if value != None:
     start = time.time()
     receivedKey = None
     while (start+arg_delay > time.time()):
-        # Does not block 
-        recvpkt = kb.pnext() 
+        # Does not block
+        recvpkt = kb.pnext()
         # Check for empty packet (timeout) and valid FCS
         if recvpkt != None and recvpkt['validcrc']:
-            receivedKey = transport_response_handle(recvpkt['bytes']) 
+            receivedKey = transport_response_handle(recvpkt['bytes'])
             if receivedKey != None:
                 print("Received key: {0}".format(receivedKey.encode("hex")))
                 kb.close()

@@ -2,6 +2,7 @@ import sys
 from datetime import datetime
 import threading, signal
 from killerbee import *
+from ..pcapdump import PcapDumper
 
 # Globals
 triggers = []
@@ -29,6 +30,7 @@ def interrupt(signum, frame):
 #  exits when trigger (threading.Event object) is set.
 class CaptureThread(threading.Thread):
     def __init__(self, channel, devstring, fname, trigger):
+        from killerbee.pcapdlt import DLT_IEEE802_15_4
         self.channel = channel
         self.devstring = devstring
         self.trigger = trigger
@@ -45,12 +47,13 @@ class CaptureThread(threading.Thread):
             packet = self.kb.pnext()
             if packet != None:
                 self.packetcount+=1
-                try:    self.kb.dblog.add_packet(full=packet)
-                except: pass #temporary hack. should migrate exception handling from zbwardrive
+                try:
+                    self.kb.dblog.add_packet(full=packet)
+                except:
+                    pass #temporary hack. should migrate exception handling from zbwardrive
                 self.pd.pcap_dump(packet[0])
         # trigger threading.Event set to false, so shutdown thread
         self.kb.sniffer_off()
         self.kb.close()
         self.pd.close()
         print("%d packets captured" % self.packetcount)
-

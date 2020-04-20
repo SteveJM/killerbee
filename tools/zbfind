@@ -861,8 +861,6 @@ class ZBFindUI:
         gtk.gdk.threads_leave()
 
 
-
-
 class ZBPoller(Thread):
     def __init__(self, ui):
         Thread.__init__(self)
@@ -895,8 +893,12 @@ class ZBPoller(Thread):
         try:
             self.kb.inject(beaconinj)
         except Exception as e:
+<<<<<<< HEAD
             print("ERROR: Unable to inject packet")
             print(e)
+=======
+            print("ERROR: Unable to inject packet: {0}".format(e))
+>>>>>>> Further changes required for Puthon3.
 
         if self.seq > 255:
             self.seq = 0
@@ -939,6 +941,10 @@ class ZBPoller(Thread):
                     self.kb.sniffer_off()
                     self.kb.sniffer_on()
                     # TODO: Add debug message mode in case users want these otherwise-useless debug msgs
+<<<<<<< HEAD
+=======
+                    #print("we may have crashed -- i toggled the interface")
+>>>>>>> Further changes required for Puthon3.
                     thresh = 0
             except Exception as e:
                 traceback.print_exc()
@@ -1111,21 +1117,25 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--channel', action='store', dest='channel', required=True, type=int, default=26)
     args = parser.parse_args()
 
-    try:    
+    try:
         gtk.gdk.threads_init()
         ui = ZBFindUI()
         zbpoll = ZBPoller(ui)
         zbpoll.start()
 
         try:
-            gtk.main()        
+            gtk.main()
         except (KeyboardInterrupt, SystemExit):
             zbpoll.stop()
             zbpoll.join()
             sys.exit()
-        
+
         zbpoll.stop()
         zbpoll.join()
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> Further changes required for Puthon3.
     except Exception as e:
         traceback.print_exc()

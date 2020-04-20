@@ -29,8 +29,8 @@ def getKillerBee(channel, page= 0):
     return kb
 
 def kb_dev_list(vendor=None, product=None):
-    '''Deprecated. Use show_dev or call kbutils.devlist.'''
-    return kbutils.devlist(vendor=None, product=None)
+    '''Deprecated. Use show_dev or call devlist.'''
+    return devlist(vendor=None, product=None)
 
 def show_dev(vendor=None, product=None, gps=None, include=None):
     '''
@@ -41,10 +41,10 @@ def show_dev(vendor=None, product=None, gps=None, include=None):
     @param include: Provide device names in this argument if you would like only
         these to be enumerated. Aka, include only these items.
     '''
-    fmt_str = "{: >14} {: <20} {: >10}"
-    print(fmt_str.format("Dev", "Product String", "Serial Number"))
-    for dev in kbutils.devlist(vendor=vendor, product=product, gps=gps, include=include):
-        print(fmt_str.format(dev[0], dev[1], dev[2] if dev[2] is not None else ""))
+    fmt = "{: >14} {: <20} {: >10}"
+    print(fmt.format("Dev", "Product String", "Serial Number"))
+    for dev in devlist(vendor=vendor, product=product, gps=gps, include=include):
+        print(fmt.format(dev[0], dev[1], str(dev[2])))
 
 # KillerBee Class
 class KillerBee:
@@ -77,7 +77,7 @@ class KillerBee:
         # IP devices may be the most straightforward, and we aren't doing
         # discovery, just connecting to defined addresses, so we'll check
         # first to see if we have an IP address given as our device parameter.
-        if (device is not None) and kbutils.isIpAddr(device):
+        if (device is not None) and isIpAddr(device):
             from .dev_sewio import isSewio
             if isSewio(device):
                 from .dev_sewio import SEWIO
@@ -87,7 +87,7 @@ class KillerBee:
         # Figure out a device is one is not set, trying USB devices next
         if self.driver is None:
             if device is None:
-                result = kbutils.search_usb(None)
+                result = search_usb(None)
                 if result != None:
                     if USBVER == 0:
                         (self.__bus, self.dev) = result
@@ -96,7 +96,7 @@ class KillerBee:
                         self.dev = result
             # Recognize if device is provided in the USB format (like a 012:456 string):
             elif ":" in device:
-                result = kbutils.search_usb(device)
+                result = search_usb(device)
                 if result == None:
                     raise KBInterfaceError("Did not find a USB device matching %s." % device)
                 else:
@@ -137,20 +137,20 @@ class KillerBee:
                     #TODO be able to check other devices if this one is not correct
                     device = glob_list[0]
             # Recognize if device specified by serial string:
-            if (device is not None) and kbutils.isSerialDeviceString(device):
+            if (device is not None) and isSerialDeviceString(device):
                 self.dev = device
                 if (self.dev == gps_devstring):
                     pass
-                elif (DEV_ENABLE_SL_NODETEST and kbutils.issl_nodetest(self.dev)):
+                elif (DEV_ENABLE_SL_NODETEST and issl_nodetest(self.dev)):
                     from .dev_sl_nodetest import SL_NODETEST
                     self.driver = SL_NODETEST(self.dev)
-                elif (DEV_ENABLE_SL_BEEHIVE and kbutils.issl_beehive(self.dev)):
+                elif (DEV_ENABLE_SL_BEEHIVE and issl_beehive(self.dev)):
                     from .dev_sl_beehive import SL_BEEHIVE
                     self.driver = SL_BEEHIVE(self.dev)
-                elif (DEV_ENABLE_ZIGDUINO and kbutils.iszigduino(self.dev)):
+                elif (DEV_ENABLE_ZIGDUINO and iszigduino(self.dev)):
                     from .dev_zigduino import ZIGDUINO
                     self.driver = ZIGDUINO(self.dev)
-                elif (DEV_ENABLE_FREAKDUINO and kbutils.isfreakduino(self.dev)):
+                elif (DEV_ENABLE_FREAKDUINO and isfreakduino(self.dev)):
                     from .dev_freakduino import FREAKDUINO
                     self.driver = FREAKDUINO(self.dev)
                 else:
@@ -173,8 +173,8 @@ class KillerBee:
         # Start a connection to the remote packet logging server, if able:
         if datasource is not None:
             try:
-                from . import dblog
-                self.dblog = dblog.DBLogger(datasource)
+                from .dblog import DBLogger
+                self.dblog = DBLogger(datasource)
             except Exception as e:
                 warn("Error initializing DBLogger (%s)." % e)
                 datasource = None   #give up nicely if error connecting, etc.
@@ -376,4 +376,3 @@ class KillerBee:
         @rtype: None
         '''
         return self.driver.jammer_off(channel=channel)
-

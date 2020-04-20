@@ -74,27 +74,26 @@ if len(err) > 0:
     sys.exit(1)
 
 zigbee_crypt = Extension('zigbee_crypt',
-                         sources = ['zigbee_crypt/zigbee_crypt.c'],
-                         libraries = ['gcrypt'],
-                         include_dirs = ['/usr/local/include', '/usr/include', '/sw/include/', 'zigbee_crypt'],
-                         library_dirs = ['/usr/local/lib', '/usr/lib','/sw/var/lib/']
-                         )
+                    sources = ['zigbee_crypt/zigbee_crypt.c'],
+                    libraries = ['gcrypt'],
+                    include_dirs = ['/usr/local/include', '/usr/include', '/sw/include/', 'zigbee_crypt'],
+                    library_dirs = ['/usr/local/lib', '/usr/lib','/sw/var/lib/']
+                    )
 
-setup(name        = 'killerbee',
-      version     = '2.7.1',
-      description = 'ZigBee and IEEE 802.15.4 Attack Framework and Tools',
-      author = 'Joshua Wright, Ryan Speers',
-      author_email = 'jwright@willhackforsushi.com, ryan@riverloopsecurity.com',
-      license   = 'LICENSE.txt',
-      packages  = ['killerbee', 'killerbee.openear', 'killerbee.zbwardrive'],
-      scripts = ['tools/zbdump', 'tools/zbgoodfind', 'tools/zbid', 'tools/zbreplay',
-                 'tools/zbconvert', 'tools/zbdsniff', 'tools/zbstumbler', 'tools/zbassocflood',
-                 'tools/zbfind', 'tools/zbscapy', 'tools/zbwireshark', 'tools/zbkey',
-                 'tools/zbwardrive', 'tools/zbopenear', 'tools/zbfakebeacon',
-                 'tools/zborphannotify', 'tools/zbpanidconflictflood', 'tools/zbrealign', 'tools/zbcat',
-                 'tools/zbjammer', 'tools/kbbootloader'],
-      install_requires=['pyserial>=2.0', 'pyusb', 'pycrypto', 'rangeparser'],
-                        #'git+https://github.com/secdev/scapy.git#egg=scapy'],
-      # NOTE: pygtk doesn't install via distutils on non-Windows hosts
-      ext_modules = [zigbee_crypt],
-      )
+setup  (name        = 'killerbee',
+        version     = '3.0.0',
+        description = 'ZigBee and IEEE 802.15.4 Attack Framework and Tools',
+        author = 'Joshua Wright, Ryan Speers',
+        author_email = 'jwright@willhackforsushi.com, ryan@riverloopsecurity.com',
+        license   = 'LICENSE.txt',
+        packages  = ['killerbee', 'killerbee.openear', 'killerbee.zbwardrive'],
+        requires = ['Crypto', 'usb', 'gtk', 'cairo', 'rangeparser'], # Not causing setup to fail, not sure why
+        scripts = ['tools/zbdump', 'tools/zbgoodfind', 'tools/zbid', 'tools/zbreplay',
+                   'tools/zbconvert', 'tools/zbdsniff', 'tools/zbstumbler', 'tools/zbassocflood',
+                   'tools/zbfind', 'tools/zbscapy', 'tools/zbwireshark', 'tools/zbkey',
+                   'tools/zbwardrive', 'tools/zbopenear', 'tools/zbfakebeacon',
+                   'tools/zborphannotify', 'tools/zbpanidconflictflood', 'tools/zbrealign', 'tools/zbcat',
+                   'tools/zbjammer', 'tools/kbbootloader'],
+        install_requires=['pyserial>=2.0', 'pyusb', 'crypto'],
+        ext_modules = [ zigbee_crypt ],
+        )

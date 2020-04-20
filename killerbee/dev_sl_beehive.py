@@ -3,7 +3,6 @@ Support for the Silabs based version of "BeeHive" SNIFFER/ INJECTOR firmware
 Author: Adam Laurie <adam@algroup.co.uk> aka RFIDiot
 
 '''
-
 import usb
 import serial
 import time
@@ -244,14 +243,14 @@ class SL_BEEHIVE:
         if channel != None or page:
             self.set_channel(channel, page)
 
-        # 
+        #
         self.__send_cmd("setTxLength", "%d" % len(packet))
         maxp = 118
         # we can send max 256 bytes over the wire so we must split large packets due to hex doubling the size
         if len(packet) > maxp:
             tosend = maxp
         else:
-            tosend = len(packet) 
+            tosend = len(packet)
         self.__send_cmd("setTxPayload", "00 %02x%s" % ((len(packet)), packet[:tosend].encode('hex')))
         if len(packet) > maxp:
             self.__send_cmd("setTxPayload", "%d %s" % (tosend + 1, packet[tosend:].encode('hex')))

@@ -365,4 +365,3 @@ class Dot154PacketParser:
         noncep2 = encpayload[1:5][::-1]
 
         return noncep1 + noncep2 + noncep3
-

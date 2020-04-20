@@ -3,10 +3,10 @@ from __future__ import print_function
 CC253x support is contributed by Scytmo.
 """
 
-
 import sys
 import struct
 import time
+import json
 from datetime import datetime
 from .kbutils import KBCapabilities, makeFCS, bytearray_to_bytes
 
@@ -227,13 +227,16 @@ class CC253x:
             if len(pdata) < 64:
 
                 if len(pdata) < 2:
+                    print("ERROR: Very short frame")
                     return None
 
                 framelen = framedata[1]
                 if len(framedata) - 3 != framelen:
+                    print("ERROR: Bad frame length: expected {0}, got {1}".format(framelen, len(framedata)))
                     return None
 
-                if framedata[0] != 0:
+                if framedata[0] != b'\x00':
+                    print("Not a capture frame:", framedata[0])
                     return None
 
                 payloadlen = framedata[7] # Includes TI format FCS

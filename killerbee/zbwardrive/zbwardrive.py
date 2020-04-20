@@ -64,6 +64,3 @@ def startScan(zbdb, currentGPS, verbose=False, dblog=False, agressive=False, inc
     kb.close()
     doScan(zbdb, currentGPS, verbose=verbose, dblog=dblog, agressive=agressive)
     return True
-
-
-

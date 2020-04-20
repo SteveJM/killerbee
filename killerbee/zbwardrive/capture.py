@@ -11,7 +11,7 @@ triggers = []
 #  initiate a pcap and online database capture.
 def startCapture(zbdb, channel, dblog=False, gps=False):
     '''
-    Before calling, you should have already ensured the channel or the 
+    Before calling, you should have already ensured the channel or the
     channel which the key is associated with does not already have an active
     capture occuring.
     '''
@@ -41,6 +41,7 @@ def interrupt(signum, frame):
 #TODO change to multiprocessing, with the db having shared state
 class CaptureThread(threading.Thread):
     def __init__(self, channel, devstring, trigger, dblog=False, gps=None):
+        from killerbee.pcapdlt import DLT_IEEE802_15_4
         self.channel = channel
         self.rf_freq_mhz = (channel - 10) * 5 + 2400
         self.devstring = devstring
@@ -74,11 +75,11 @@ class CaptureThread(threading.Thread):
                     if self.currentGPS != None and 'lat' in self.currentGPS:
                         # We use the existince of the 'lat' key to promise ourselves
                         # that the lat, lng, and alt keys are there.
-                        self.pd.pcap_dump(packet[0], 
-                              freq_mhz=self.rf_freq_mhz, ant_dbm=packet['dbm'], 
+                        self.pd.pcap_dump(packet[0],
+                              freq_mhz=self.rf_freq_mhz, ant_dbm=packet['dbm'],
                               location=(self.currentGPS['lng'], self.currentGPS['lat'], self.currentGPS['alt'])   )
                     else:
-                        self.pd.pcap_dump(packet[0], freq_mhz=self.rf_freq_mhz, 
+                        self.pd.pcap_dump(packet[0], freq_mhz=self.rf_freq_mhz,
                                           ant_dbm=packet['dbm'])
                 except IOError as e:
                     #TODO replace this with code that ensures the captures exit before the manager
@@ -95,4 +96,3 @@ class CaptureThread(threading.Thread):
         self.kb.close()
         self.pd.close()
         print("%d packets captured on channel %d." % (self.packetcount, self.channel))
-

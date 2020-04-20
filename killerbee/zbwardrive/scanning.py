@@ -96,7 +96,7 @@ def doScan(zbdb, currentGPS, verbose=False, dblog=False, agressive=False, stayti
             #if verbose: print('Setting channel to %d' % channel)
             kbscan.set_channel(channel)
         except Exception as e:
-            raise Exception('Failed to set channel to %d (%s).' % (channel,e))
+            raise Exception('Failed to set channel to {0:d}: {1}'.format(channel,e))
         if verbose:
             print('Injecting a beacon request on channel %d.' % channel)
         try:
@@ -145,4 +145,3 @@ def doScan(zbdb, currentGPS, verbose=False, dblog=False, agressive=False, stayti
     kbscan.close()
     zbdb.update_devices_status(scannerDevId, 'Free')
 # --- end of doScan ---
-

@@ -1,3 +1,4 @@
+import binascii
 import struct
 import time
 from datetime import datetime
@@ -260,7 +261,6 @@ class PcapDumper:
             self.__fh.flush()
         except IOError as e:
             raise e
-
 
     def close(self):
         '''

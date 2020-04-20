@@ -11,9 +11,11 @@ import argparse
 import threading
 from threading import Event
 import logging
+import struct
 from time import sleep
 
-from killerbee import *
+from killerbee import KillerBee
+
 
 
 def create_beacon(panid, coordinator, epanid):
@@ -82,7 +84,7 @@ def get_spanids():
 def inject():
     while not continue_execution.isSet():
         sleep(args.sleep)  # Added sleep as it seems we were overwhelming USB lib.
-        sp = create_beacon(threading.spanid, args.coordinator, args.epanid) 
+        sp = create_beacon(threading.spanid, args.coordinator, args.epanid)
         #TODO: Is there any need for: args.devleave, args.coordinator, args.device)
         try:
             kb.inject(sp) #create_beacon returns a string
@@ -141,5 +143,5 @@ if __name__ == '__main__':
             getem2.join(timeout=1)
         except KeyboardInterrupt:
             continue_execution.set()
-            
-    # cleanup (not yet required since Killerbee() re-initializes interface for rzusbsticks) 
+
+    # cleanup (not yet required since Killerbee() re-initializes interface for rzusbsticks)

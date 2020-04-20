@@ -13,7 +13,7 @@ class GoodFETatmel128rfa1(GoodFETAVR):
     enable_AACK = False
     def serInit(self, port=None, timeout=2, attemptlimit=None):
         if port==None:
-            port=os.environ.get("GOODFET");
+            port=os.environ.get("GOODFET")
         self.pyserInit(port, timeout, attemptlimit)
 
     def pyserInit(self, port, timeout, attemptlimit):
@@ -24,41 +24,41 @@ class GoodFETatmel128rfa1(GoodFETAVR):
                 attemptlimit == 2
 
             # Make timeout None to wait forever, 0 for non-blocking mode.
-            import serial;
+            import serial
 
             if os.name=='nt' and sys.version.find('64 bit')!=-1:
-                print("WARNING: PySerial requires a 32-bit Python build in Windows.");
+                print("WARNING: PySerial requires a 32-bit Python build in Windows.")
 
             if port is None and os.environ.get("GOODFET")!=None:
-                glob_list = glob.glob(os.environ.get("GOODFET"));
+                glob_list = glob.glob(os.environ.get("GOODFET"))
                 if len(glob_list) > 0:
-                    port = glob_list[0];
+                    port = glob_list[0]
                 else:
-                    port = os.environ.get("GOODFET");
+                    port = os.environ.get("GOODFET")
             if port is None:
-                glob_list = glob.glob("/dev/tty.usbserial*");
+                glob_list = glob.glob("/dev/tty.usbserial*")
                 if len(glob_list) > 0:
-                    port = glob_list[0];
+                    port = glob_list[0]
             if port is None:
-                glob_list = glob.glob("/dev/ttyUSB*");
+                glob_list = glob.glob("/dev/ttyUSB*")
                 if len(glob_list) > 0:
-                    port = glob_list[0];
+                    port = glob_list[0]
             if port is None:
-                glob_list = glob.glob("/dev/ttyU0");
+                glob_list = glob.glob("/dev/ttyU0")
                 if len(glob_list) > 0:
-                    port = glob_list[0];
+                    port = glob_list[0]
             if port is None and os.name=='nt':
-                from scanwin32 import winScan;
-                scan=winScan();
+                from scanwin32 import winScan
+                scan=winScan()
                 for order,comport,desc,hwid in sorted(scan.comports()):
                     try:
                         if hwid.index('FTDI')==0:
-                            port=comport;
+                            port=comport
                     except:
                         #Do nothing.
-                        a=1;
+                        pass
 
-            baud=115200;
+            baud=115200
 
             self.serialport = serial.Serial(
                 port,
@@ -67,10 +67,10 @@ class GoodFETatmel128rfa1(GoodFETAVR):
                 timeout=timeout
                 )
 
-            self.verb=0;
+            self.verb=0
             self.data=""
-            attempts=0;
-            self.connected=0;
+            attempts=0
+            self.connected=0
 
             while self.connected==0:
                 self.serialport.setDTR(False)
@@ -78,10 +78,10 @@ class GoodFETatmel128rfa1(GoodFETAVR):
                     if attemptlimit is not None and attempts >= attemptlimit:
                         return
 
-                    attempts=attempts+1;
-                    self.readcmd(); #Read the first command.
+                    attempts=attempts+1
+                    self.readcmd()  #Read the first command.
                     if self.verbose:
-                        print("Got %02x,%02x:'%s'" % (self.app,self.verb,self.data));
+                        print("Got %02x,%02x:'%s'" % (self.app,self.verb,self.data))
 
                 #Here we have a connection, but maybe not a good one.
                 for foo in range(1,30):
@@ -94,8 +94,8 @@ class GoodFETatmel128rfa1(GoodFETAVR):
                         self.connected = 1
                         break
             if self.verbose:
-                print("Connected after %02i attempts." % attempts);
-            self.serialport.timeout = 12;
+                print("Connected after %02i attempts." % attempts)
+            self.serialport.timeout = 12
 
     def serClose(self):
         self.connected = 0
@@ -104,8 +104,8 @@ class GoodFETatmel128rfa1(GoodFETAVR):
 
     def writecmd(self, app, verb, count=0, data=[]):
         """Write a command and some data to the GoodFET."""
-        self.serialport.write(chr(app));
-        self.serialport.write(chr(verb));
+        self.serialport.write(chr(app))
+        self.serialport.write(chr(verb))
         if self.verbose:
             print("Tx: ( 0x%02x, 0x%02x, %d )" % ( app, verb, count ))
         if count > 0:
@@ -113,17 +113,17 @@ class GoodFETatmel128rfa1(GoodFETAVR):
                 old = data
                 data = []
                 for i in range(0,count):
-                    data += chr(old[i]);
-            outstr=''.join(data);
+                    data += chr(old[i])
+            outstr=''.join(data)
 
         #little endian 16-bit length
             count = len(outstr)
-        self.serialport.write(chr(count&0xFF));
-        self.serialport.write(chr(count>>8));
+        self.serialport.write(chr(count&0xFF))
+        self.serialport.write(chr(count>>8))
         if count > 0:
             if self.verbose:
                 print("sending: %s" %outstr.encode("hex"))
-            self.serialport.write(outstr);
+            self.serialport.write(outstr)
 
 
         if not self.besilent:
@@ -149,14 +149,14 @@ class GoodFETatmel128rfa1(GoodFETAVR):
             self.data = ""
             return
 
-        self.app=ord(app);
+        self.app=ord(app)
 
-        v = self.serialport.read(1);
+        v = self.serialport.read(1)
         if v:
             self.verb = ord(v)
         else:
             self.verb = 0
-            
+
         c1 = self.serialport.read(1)
         c2 = self.serialport.read(1)
         if (c1 and c2):
@@ -174,11 +174,11 @@ class GoodFETatmel128rfa1(GoodFETAVR):
                 print("# DEBUG 0x%x" % struct.unpack(fmt[self.count-1], self.serialport.read(self.count))[0])
             elif self.verb==0xFD:
                         #Do nothing, just wait so there's no timeout.
-                print("# NOP.");
+                print("# NOP.")
             return ""
         else:
-            self.data=self.serialport.read(self.count);
-            return self.data;
+            self.data=self.serialport.read(self.count)
+            return self.data
 
     def RF_setchannel(self, chan):
         if (chan < 11) or (chan > 26):
@@ -194,12 +194,12 @@ class GoodFETatmel128rfa1(GoodFETAVR):
             bytes = 1
         data = [reg, 0, bytes%255, bytes>>8] #+ ([0]*bytes)
         self.data = None
-        self.writecmd(self.ATMELRADIOAPP,0x02,len(data),data);
-        toret=0;
+        self.writecmd(self.ATMELRADIOAPP,0x02,len(data),data)
+        toret=0
         if self.data:
             #for i in range(0,bytes):
-            #    toret=toret|(ord(self.data[i+1])<<(8*i));
-            #return toret;
+            #    toret=toret|(ord(self.data[i+1])<<(8*i))
+            #return toret
             # right now only works with a byte of data
             return ord(self.data)
         else:
@@ -213,17 +213,17 @@ class GoodFETatmel128rfa1(GoodFETAVR):
             print("Warning, currently cannot poke more than 1 byte")
             bytes = 1
         for i in range(0,bytes):
-            data=data+[(val>>(8*i))&0xFF];
+            data=data+[(val>>(8*i))&0xFF]
 
-        self.writecmd(self.ATMELRADIOAPP,0x03,len(data),data);
+        self.writecmd(self.ATMELRADIOAPP,0x03,len(data),data)
         newval = self.peek(reg,bytes)
         if newval!=val:
             print("Warning, failed to set r%02x=%02x, got %02x." %(
                 reg,
                 val,
-                newval));
+                newval))
 
-        return;
+        return
 
     def setup(self):
         self.RF_setup()
@@ -235,10 +235,10 @@ class GoodFETatmel128rfa1(GoodFETAVR):
         """Get a packet from the radio.  Returns None if none is waiting."""
         #doto: check if packet has arrived, flush if not new
         self.writecmd(self.ATMELRADIOAPP, 0x80, 0, None)
-        data=self.data;
+        data=self.data
         self.packetlen = len(data)
         if (self.packetlen > 0):
-            return data;
+            return data
         else:
             return None
 
@@ -247,7 +247,6 @@ class GoodFETatmel128rfa1(GoodFETAVR):
             import array
             payload = array.array('B', payload).tostring()
         self.writecmd(self.ATMELRADIOAPP, 0x81, len(payload), payload)
-
 
     def RF_getrssi(self):
         """Returns the received signal strength"""
@@ -268,11 +267,9 @@ class GoodFETatmel128rfa1(GoodFETAVR):
             self.enable_AACK = False
             self.writecmd(self.ATMELRADIOAPP, 0x85)
 
-
     def RF_autocrc(self, autocrc=1):
         self.autocrc = autocrc
         if autocrc:
             self.writecmd(self.ATMELRADIOAPP, 0x86)
         else:
             self.writecmd(self.ATMELRADIOAPP, 0x87)
-

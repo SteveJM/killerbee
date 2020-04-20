@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import sys
 
 # Import USB support depending on version of pyUSB
@@ -20,7 +18,6 @@ import glob
 import time
 import random
 import inspect
-from struct import pack
 
 from .config import *       #to get DEV_ENABLE_* variables
 
@@ -317,7 +314,7 @@ def devlist(vendor=None, product=None, gps=None, include=None):
                 devlist.append([ipaddr, "Sewio Open-Sniffer v{0}".format(dev_sewio.getFirmwareVersion(ipaddr)), dev_sewio.getMacAddr(ipaddr)])
             #NOTE: Enumerations of other IP connected sniffers go here.
             else:
-                print(("kbutils.devlist has an unknown type of IP sniffer device ({0}).".format(ipaddr)))
+                print("kbutils.devlist has an unknown type of IP sniffer device ({0}).".format(ipaddr))
 
     return devlist
 
@@ -559,8 +556,8 @@ def hexdump(src, length=16):
     result = []
     for i in range(0, len(src), length):
        chars = src[i:i+length]
-       hex = ' '.join(["%02x" % ord(x) for x in chars])
-       printable = ''.join(["%s" % ((ord(x) <= 127 and FILTER[ord(x)]) or '.') for x in chars])
+       hex = ' '.join(["%02x" % x for x in chars])
+       printable = ''.join(["%s" % ((x <= 127 and FILTER[x]) or '.') for x in chars])
        result.append("%04x:  %-*s  %s\n" % (i, length*3, hex, printable))
     return ''.join(result)
 
@@ -573,10 +570,7 @@ def randbytes(size):
     @rtype: String
     '''
     return ''.join(chr(random.randrange(0,256)) for i in range(size))
-<<<<<<< HEAD
 
-=======
->>>>>>> Steps through zbid functioning on OSX python 3.0
 
 def randmac(length=8):
     '''
@@ -624,7 +618,7 @@ def makeFCS(data):
         crc = (crc // 16) ^ (q * 4225)
         q = (crc ^ (c // 16)) & 15		#And high 4 bits
         crc = (crc // 16) ^ (q * 4225)
-    return pack('<H', crc) #return as bytes in little endian order
+    return struct.pack('<H', crc) #return as bytes in little endian order
 
 
 class KBException(Exception):

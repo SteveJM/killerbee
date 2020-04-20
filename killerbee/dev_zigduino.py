@@ -172,7 +172,7 @@ class ZIGDUINO:
             packet = self.handle.RF_rxpacket()
         if packet is None:
             return None
-        rssi = self.handle.RF_getrssi() #TODO calibrate            
+        rssi = self.handle.RF_getrssi() #TODO calibrate
         frame = packet
         if frame[-2:] == makeFCS(frame[:-2]): validcrc = True
         else: validcrc = False
@@ -211,4 +211,3 @@ class ZIGDUINO:
 	    '''
 	    #TODO implement
 	    raise Exception('Not yet implemented')
-

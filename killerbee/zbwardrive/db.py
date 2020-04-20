@@ -6,7 +6,7 @@ import string
 
 class ZBScanDB:
     """
-    API to interact with the "database" storing information 
+    API to interact with the "database" storing information
     for the zbscanning program.
     """
 
@@ -57,7 +57,7 @@ class ZBScanDB:
 
     def channel_status_logging(self, chan):
         '''
-        Returns False if we have not seen the network or are not currently 
+        Returns False if we have not seen the network or are not currently
         logging it's channel, and returns True if we are currently logging it.
         @return boolean
         '''
@@ -71,4 +71,3 @@ class ZBScanDB:
 
 def toHex(bin):
     return ''.join(["%02x" % ord(x) for x in bin])
-

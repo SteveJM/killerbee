@@ -11,7 +11,7 @@ def usage():
 zbgoodfind - search a binary file to identify the encryption key for a given
 SNA or libpcap IEEE 802.15.4 encrypted packet - jwright@willhackforsushi.com
 
-Usage: zbgoodfind [-frRFd] [-f binary file] [-r pcapfile] [-R daintreefile] 
+Usage: zbgoodfind [-frRFd] [-f binary file] [-r pcapfile] [-R daintreefile]
          [-F Don't skip 2-byte FCS at end of each frame]
          [-d genenerate binary file (test mode)]
     """, file=sys.stderr)
@@ -92,7 +92,7 @@ while len(sys.argv) > 1:
     if op == '-h':
         usage()
         sys.exit(0)
- 
+
 if arg_searchfile == None:
     print("ERROR: Must specify a search file with -f", file=sys.stderr)
     usage()
@@ -153,4 +153,3 @@ if packetfound == 0:
     print("No encrypted packets found in the capture file %s." % savefile)
 
 cap.close()
-

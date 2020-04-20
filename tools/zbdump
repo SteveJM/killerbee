@@ -13,8 +13,8 @@ import signal
 import argparse
 import os
 
-from scapy.all import *
-from killerbee import *
+from killerbee.pcapdlt import *
+from killerbee.pcapdump import *
 from killerbee.scapy_extensions import *
 
 def interrupt(signum, frame):
@@ -112,5 +112,4 @@ if pd:
 if dt:
     dt.close()
 
-print(("{0} packets captured".format(packetcount)))
-
+print("{0} packets captured".format(packetcount))

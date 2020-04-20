@@ -12,6 +12,7 @@ import threading
 import gps
 
 from killerbee import *
+from killerbee.pcapdlt import DLT_IEEE802_15_4
 
 # Globals
 session = ""
@@ -28,7 +29,7 @@ last_seen = ""
 
 def broadcast_event(data):
     ''' Send broadcast data to all active threads '''
-    print("\nShutting down threads.") 
+    print("\nShutting down threads.")
     for q in active_queues:
         q.put(data)
 
@@ -65,10 +66,10 @@ class LocationThread(threading.Thread):
             else:
                 end_time = datetime.datetime.utcnow()
                 elapsed_time = end_time - last_seen
-                print(chr(0x1b) + "[2;5fElapsed time since last location change: %s" % str(elapsed_time)) 
+                print(chr(0x1b) + "[2;5fElapsed time since last location change: %s" % str(elapsed_time))
             print(chr(0x1b) + "[3;5fLat: %f, Long: %f, Alt: %f." % (latitude, longitude, altitude))
             time.sleep(1)
- 
+
 
 class CaptureThread(threading.Thread):
     ''' Thread to capture on a given channel, using a given device, to a given pcap file, exits when it receives a broadcast shutdown message via Queue.Queue'''
@@ -89,7 +90,7 @@ class CaptureThread(threading.Thread):
         self.kb = KillerBee(device=self.dev)
         self.kb.set_channel(self.channel)
         self.kb.sniffer_on()
-        
+
         # loop capturing packets to dblog and file
         message = ""
         while (True):
@@ -120,7 +121,7 @@ class CaptureThread(threading.Thread):
 
 def signal_handler(signal, frame):
     ''' Signal handler called on keyboard interrupt to exit threads and exit scanner script'''
-    os.system('clear') 
+    os.system('clear')
     broadcast_event("shutdown")
     time.sleep(1)
     sys.exit(0)

@@ -2,7 +2,7 @@
 # Sewio Open-Sniffer Radio Client
 # (product previously known as Wislab Sniffer)
 # This sniffer is a remote IPv4 host.
-# 
+#
 # (C) 2013 Ryan Speers <ryan at riverloopsecurity.com>
 #
 # For documentation from the vendor, visit:
@@ -53,7 +53,7 @@ def ntp_to_system_time(secs, msecs):
 
 def getFirmwareVersion(ip):
     try:
-        html = urllib.request.urlopen("http://{0}/".format(ip))
+        html = urllib2.urlopen("http://{0}/".format(ip))
         fw = re.search(r'Firmware version ([0-9.]+)', html.read())
         if fw is not None:
             return fw.group(1)
@@ -66,7 +66,7 @@ def getMacAddr(ip):
     Returns a string for the MAC address of the sniffer.
     '''
     try:
-        html = urllib.request.urlopen("http://{0}/".format(ip))
+        html = urllib2.urlopen("http://{0}/".format(ip))
         # Yup, we're going to have to steal the status out of a JavaScript variable
         #var values = removeSSItag('<!--#pindex-->STOPPED,00:1a:b6:00:0a:a4,...
         res = re.search(r'<!--#pindex-->[A-Z]+,((?:[0-9a-f]{2}:){5}[0-9a-f]{2})', html.read())
@@ -98,8 +98,8 @@ class SEWIO:
         self._modulation = 0 #unknown, will be set by change channel currently
         self.handle = None
         self.dev = dev
-        
-        #TODO The receive port and receive IP address are currently not 
+
+        #TODO The receive port and receive IP address are currently not
         # obtained from or verified against the Sewio sniffer, nor are they
         # used to change the settings on the sniffer.
         self.udp_recv_port = recvport
@@ -116,7 +116,7 @@ class SEWIO:
         self.__stream_open = False
         self.capabilities = KBCapabilities()
         self.__set_capabilities()
-        
+
     def close(self):
         '''Actually close the receiving UDP socket.'''
         self.sniffer_off()  # turn sniffer off if it's currently running
@@ -156,7 +156,7 @@ class SEWIO:
             returns True if an HTTP 200 code was received.
         '''
         try:
-            html = urllib.request.urlopen("http://{0}/{1}".format(self.dev, path))
+            html = urllib2.urlopen("http://{0}/{1}".format(self.dev, path))
             if fetch:
                 return html.read()
             else:
@@ -181,7 +181,7 @@ class SEWIO:
 
     def __sync_status(self):
         '''
-        This updates the standard self.__stream_open variable based on the 
+        This updates the standard self.__stream_open variable based on the
         status as reported from asking the remote sniffer.
         '''
         self.__stream_open = self.__sniffer_status()
@@ -214,13 +214,13 @@ class SEWIO:
         '''
         self.capabilities.require(KBCapabilities.SNIFF)
 
-        # Because the Sewio just toggles, we have to only hit the page 
+        # Because the Sewio just toggles, we have to only hit the page
         # if we need to go from off to on state.
         self.__sync_status()
         if self.__stream_open == False:
             if channel != None:
                 self.set_channel(channel, page)
-            
+
             if not self.__make_rest_call('status.cgi?p=2', fetch=False):
                 raise KBInterfaceError("Error instructing sniffer to start capture.")
 
@@ -228,31 +228,31 @@ class SEWIO:
             self.__sync_status()
             if not self.__stream_open:
                 raise KBInterfaceError("Sniffer did not turn on capture.")
-                
+
     # KillerBee expects the driver to implement this function
     def sniffer_off(self):
         '''
         Turns the sniffer off.
         @rtype: None
         '''
-        # Because the Sewio just toggles, we have to only hit the page 
+        # Because the Sewio just toggles, we have to only hit the page
         # if we need to go from on to off state.
         self.__sync_status()
         if self.__stream_open == True:
             if not self.__make_rest_call('status.cgi?p=2', fetch=False):
                 raise KBInterfaceError("Error instructing sniffer to stop capture.")
-            
+
             #This makes sure the change actually happened
             self.__sync_status()
             if self.__stream_open:
                 raise KBInterfaceError("Sniffer did not turn off capture.")
-   
+
     #TODO: convert to channel/page for subghz
     @staticmethod
     def __get_default_modulation(channel, page=0):
         '''
         Return the Sewio-specific integer representing the modulation which
-        should be choosen to be IEEE 802.15.4 complinating for a given channel 
+        should be choosen to be IEEE 802.15.4 complinating for a given channel
         number.
         Captured values from sniffing Sewio web interface, unsure why these
         are done as such.
@@ -307,12 +307,12 @@ class SEWIO:
     @staticmethod
     def __parse_zep_v2(data):
         '''
-        Parse the packet from the ZigBee encapsulation protocol version 2/3 and 
+        Parse the packet from the ZigBee encapsulation protocol version 2/3 and
         return the fields desired for usage by pnext().
-        There is support here for some oddities specific to the Sewio 
-        implementation of ZEP and the packet, such as CC24xx format FCS 
+        There is support here for some oddities specific to the Sewio
+        implementation of ZEP and the packet, such as CC24xx format FCS
         headers being expected.
-        
+
         The ZEP protocol parsing is mainly based on Wireshark source at:
         http://anonsvn.wireshark.org/wireshark/trunk/epan/dissectors/packet-zep.c
         * ZEP v2 Header will have the following format (if type=1/Data):
@@ -347,7 +347,7 @@ class SEWIO:
             #define IEEE802154_CC24xx_CRC_OK            0x8000
             #define IEEE802154_CC24xx_RSSI              0x00FF
             frame = data[32:]
-            # A length vs len(frame) check is not used here but is an 
+            # A length vs len(frame) check is not used here but is an
             #  additional way to verify that all is good (length == len(frame)).
             if crcmode == 0:
                 validcrc = ((ord(data[-1]) & 0x80) == 0x80)
@@ -432,4 +432,3 @@ class SEWIO:
         @rtype: None
         '''
         self.capabilities.require(KBCapabilities.PHYJAM)
-

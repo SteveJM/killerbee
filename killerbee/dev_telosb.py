@@ -83,12 +83,12 @@ class TELOSB:
         '''
         self.capabilities.require(KBCapabilities.SNIFF)
 
-        self.handle.RF_promiscuity(1);
-        self.handle.RF_autocrc(0);
+        self.handle.RF_promiscuity(1)
+        self.handle.RF_autocrc(0)
 
         if channel != None:
             self.set_channel(channel, page)
-        
+
         self.handle.CC_RFST_RX();
 
         self.__stream_open = True
@@ -171,7 +171,7 @@ class TELOSB:
         if self.__stream_open == False:
             self.sniffer_on() #start sniffing
 
-        packet = None;
+        packet = None
         start = datetime.utcnow()
 
         while (packet is None and (start + timedelta(microseconds=timeout) > datetime.utcnow())):
@@ -190,7 +190,7 @@ class TELOSB:
         result['dbm'] = rssi - 45 #TODO tune specifically to the Tmote platform (does ext antenna need to different?)
         result['datetime'] = datetime.utcnow()
         return result
- 
+
     def ping(self, da, panid, sa, channel=None, page=0):
         '''
         Not yet implemented.
@@ -232,4 +232,3 @@ class TELOSB:
         '''
         #TODO implement
         raise Exception('Not yet implemented')
-
