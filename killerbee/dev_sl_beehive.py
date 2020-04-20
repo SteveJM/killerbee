@@ -243,7 +243,6 @@ class SL_BEEHIVE:
         if channel != None or page:
             self.set_channel(channel, page)
 
-        #
         self.__send_cmd("setTxLength", "%d" % len(packet))
         maxp = 118
         # we can send max 256 bytes over the wire so we must split large packets due to hex doubling the size

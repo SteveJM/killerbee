@@ -2,7 +2,6 @@ import sys
 from datetime import datetime
 import threading, signal
 from killerbee import *
-from ..pcapdump import PcapDumper
 
 # Globals
 triggers = []
@@ -30,7 +29,6 @@ def interrupt(signum, frame):
 #  exits when trigger (threading.Event object) is set.
 class CaptureThread(threading.Thread):
     def __init__(self, channel, devstring, fname, trigger):
-        from killerbee.pcapdlt import DLT_IEEE802_15_4
         self.channel = channel
         self.devstring = devstring
         self.trigger = trigger

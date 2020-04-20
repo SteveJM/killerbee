@@ -13,11 +13,11 @@ except ImportError:
 
 import serial
 import os
-import struct
 import glob
 import time
 import random
 import inspect
+from struct import pack
 
 from .config import *       #to get DEV_ENABLE_* variables
 
@@ -556,8 +556,8 @@ def hexdump(src, length=16):
     result = []
     for i in range(0, len(src), length):
        chars = src[i:i+length]
-       hex = ' '.join(["%02x" % x for x in chars])
-       printable = ''.join(["%s" % ((x <= 127 and FILTER[x]) or '.') for x in chars])
+       hex = ' '.join(["%02x" % ord(x) for x in chars])
+       printable = ''.join(["%s" % ((ord(x) <= 127 and FILTER[ord(x)]) or '.') for x in chars])
        result.append("%04x:  %-*s  %s\n" % (i, length*3, hex, printable))
     return ''.join(result)
 
@@ -618,7 +618,7 @@ def makeFCS(data):
         crc = (crc // 16) ^ (q * 4225)
         q = (crc ^ (c // 16)) & 15		#And high 4 bits
         crc = (crc // 16) ^ (q * 4225)
-    return struct.pack('<H', crc) #return as bytes in little endian order
+    return pack('<H', crc) #return as bytes in little endian order
 
 
 class KBException(Exception):
@@ -652,7 +652,7 @@ def pyusb_1x_patch():
 
 
 def bytearray_to_bytes(b):
-    return b"".join(struct.pack('B', value) for value in b)
+    return b"".join(pack('B', value) for value in b)
 
 
 if USBVER == 1:

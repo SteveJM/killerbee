@@ -494,7 +494,7 @@ class RZUSBSTICK:
     def inject(self, packet, channel=None, count=1, delay=0, page=0):
         '''
         Injects the specified packet contents.
-        @type packet: Bytes
+        @type packet: String
         @param packet: Packet contents to transmit, without FCS.
         @type channel: Integer
         @param channel: Sets the channel, optional
@@ -520,7 +520,7 @@ class RZUSBSTICK:
             self.set_channel(channel, page)
 
         # Append two bytes to be replaced with FCS by firmware.
-        packet += b"\x00\x00"
+        packet += "\x00\x00"
 
         for pnum in range(count):
             # Format for packet is opcode RZ_CMD_INJECT_FRAME, one-byte length,
@@ -603,7 +603,7 @@ class RZUSBSTICK:
                 # The last byte of frame data is the link quality indicator
                 ret['lqi'] = framedata[-1]
                 # Convert the framedata to a string for the return value
-                ret[0] = b''.join(framedata[:-1])
+                ret[0] = ''.join(framedata[:-1])
                 ret['bytes'] = ret[0]
                 return ret
             else:

@@ -140,7 +140,7 @@ if __name__ == '__main__':
         csvfile.write("panid,source,extpanid,stackprofile,stackversion,channel\n")
 
     # Beacon frame
-    beacon = b"\x03\x08\x00\xff\xff\xff\xff\x07"
+    beacon = "\x03\x08\x00\xff\xff\xff\xff\x07"
     # Immutable strings - split beacon around sequence number field
     beaconp1 = beacon[0:2]
     beaconp2 = beacon[3:]
@@ -182,7 +182,7 @@ if __name__ == '__main__':
         if args.verbose:
             print("Transmitting beacon request.")
 
-        beaconinj = b''.join([beaconp1, bytes([seqnum]), beaconp2])
+        beaconinj = ''.join([beaconp1, bytes([seqnum]), beaconp2])
 
         # Process packets for arg_delay seconds looking for the beacon
         # response frame.

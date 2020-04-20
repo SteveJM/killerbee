@@ -41,7 +41,6 @@ def interrupt(signum, frame):
 #TODO change to multiprocessing, with the db having shared state
 class CaptureThread(threading.Thread):
     def __init__(self, channel, devstring, trigger, dblog=False, gps=None):
-        from killerbee.pcapdlt import DLT_IEEE802_15_4
         self.channel = channel
         self.rf_freq_mhz = (channel - 10) * 5 + 2400
         self.devstring = devstring
