@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # NOTE: See the README file for a list of dependencies to install.
 
 from __future__ import print_function
