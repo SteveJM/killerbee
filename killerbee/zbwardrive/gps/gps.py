@@ -15,7 +15,7 @@
 # now live in a different module.
 #
 import time
-from client import *
+from .client import *
 
 NaN = float('nan')
 def isnan(x): return str(x) == 'nan'
@@ -99,7 +99,7 @@ class gpsdata:
             )
 
     def __init__(self):
-        # Initialize all data members 
+        # Initialize all data members
         self.online = 0                 # NZ if GPS on, zero if not
 
         self.valid = 0
@@ -235,14 +235,14 @@ class gps(gpsdata, gpsjson):
                     d1 = int(prefix.pop())
                     newsats = []
                     for i in range(d1):
-                        newsats.append(gps.satellite(*map(int, satellites[i].split())))
+                        newsats.append(gps.satellite(*list(map(int, satellites[i].split()))))
                     self.satellites = newsats
                     self.valid |= SATELLITE_SET
 
     def __oldstyle_shim(self):
         # The rest is backwards compatibility for the old interface
         def default(k, dflt, vbit=0):
-            if k not in self.data.keys():
+            if k not in list(self.data.keys()):
                 return dflt
             else:
                 self.valid |= vbit
@@ -253,8 +253,8 @@ class gps(gpsdata, gpsjson):
             self.valid = ONLINE_SET | DEVICE_SET
             self.path        = self.data["path"]
             self.activated   = default("activated", None)
-            driver = default("driver", None, DEVICEID_SET) 
-            subtype = default("subtype", None, DEVICEID_SET) 
+            driver = default("driver", None, DEVICEID_SET)
+            subtype = default("subtype", None, DEVICEID_SET)
             self.gps_id      = driver
             if subtype:
                 self.gps_id += " " + subtype
@@ -283,8 +283,8 @@ class gps(gpsdata, gpsjson):
         elif self.data.get("class") == "SKY":
             for attrp in "xyvhpg":
                 setattr(self, attrp+"dop", default(attrp+"dop", NaN, DOP_SET))
-            if "satellites" in self.data.keys():
-                self.satellites = [] 
+            if "satellites" in list(self.data.keys()):
+                self.satellites = []
                 for sat in self.data['satellites']:
                     self.satellites.append(gps.satellite(PRN=sat['PRN'], elevation=sat['el'], azimuth=sat['az'], ss=sat['ss'], used=sat['used']))
             self.satellites_used = 0
@@ -314,7 +314,7 @@ class gps(gpsdata, gpsjson):
             self.valid |= PACKET_SET
         return 0
 
-    def next(self):
+    def __next__(self):
         if self.poll() == -1:
             raise StopIteration
         if hasattr(self, "data"):
@@ -356,7 +356,7 @@ if __name__ == '__main__':
         if switch == '-v':
             verbose = True
     if len(arguments) > 2:
-        print 'Usage: gps.py [-v] [host [port]]'
+        print('Usage: gps.py [-v] [host [port]]')
         sys.exit(1)
 
     opts = { "verbose" : verbose }
@@ -369,6 +369,6 @@ if __name__ == '__main__':
     session.set_raw_hook(lambda s: sys.stdout.write(s.strip() + "\n"))
     session.stream(WATCH_ENABLE|WATCH_NEWSTYLE)
     for report in session:
-        print report
+        print(report)
 
 # gps.py ends here

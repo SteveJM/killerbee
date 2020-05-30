@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 
 __version__ = '0.6'
 import logging
@@ -7,7 +7,7 @@ log_killerbee = logging.getLogger('scapy.killerbee')
 try:
 	from scapy.all import *
 except ImportError:
-	print 'This tool requires Scapy to be installed (specifically scapy-com edition).'
+	print('This tool requires Scapy to be installed (specifically scapy-com edition).')
 	from sys import exit
 	exit(-1)
 

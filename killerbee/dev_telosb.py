@@ -9,8 +9,8 @@ import time
 import struct
 import time
 from datetime import datetime, timedelta
-from kbutils import KBCapabilities, makeFCS
-from GoodFETCCSPI import GoodFETCCSPI
+from .kbutils import KBCapabilities, makeFCS
+from .GoodFETCCSPI import GoodFETCCSPI
 
 CC2420_REG_SYNC = 0x14
 
@@ -62,7 +62,7 @@ class TELOSB:
     # KillerBee expects the driver to implement this function
     #def get_dev_info(self, dev, bus):
     def get_dev_info(self):
-	'''
+        '''
         Returns device information in a list identifying the device.
         @rtype: List
         @return: List of 3 strings identifying device.
@@ -83,14 +83,13 @@ class TELOSB:
         '''
         self.capabilities.require(KBCapabilities.SNIFF)
 
-        self.handle.RF_promiscuity(1);
-        self.handle.RF_autocrc(0);
+        self.handle.RF_promiscuity(1)
+        self.handle.RF_autocrc(0)
 
         if channel != None:
             self.set_channel(channel, page)
-        
+
         self.handle.CC_RFST_RX();
-        #print "Sniffer started (listening as %010x on %i MHz)" % (self.handle.RF_getsmac(), self.handle.RF_getfreq()/10**6);
 
         self.__stream_open = True
 
@@ -153,7 +152,7 @@ class TELOSB:
 
         self.handle.RF_autocrc(1)               #let radio add the CRC
         for pnum in range(0, count):
-            gfready = [ord(x) for x in packet]  #convert packet string to GoodFET expected integer format
+            gfready = list(bytearray(packet))  #convert packet string to GoodFET expected integer format
             gfready.insert(0, len(gfready)+2)   #add a length that leaves room for CRC
             self.handle.RF_txpacket(gfready)
             # Sleep was for 1 second but testing by Gianfranco Costamagna suggested lowering to 1/100th of a second
@@ -172,7 +171,7 @@ class TELOSB:
         if self.__stream_open == False:
             self.sniffer_on() #start sniffing
 
-        packet = None;
+        packet = None
         start = datetime.utcnow()
 
         while (packet is None and (start + timedelta(microseconds=timeout) > datetime.utcnow())):
@@ -191,7 +190,7 @@ class TELOSB:
         result['dbm'] = rssi - 45 #TODO tune specifically to the Tmote platform (does ext antenna need to different?)
         result['datetime'] = datetime.utcnow()
         return result
- 
+
     def ping(self, da, panid, sa, channel=None, page=0):
         '''
         Not yet implemented.
@@ -233,4 +232,3 @@ class TELOSB:
         '''
         #TODO implement
         raise Exception('Not yet implemented')
-

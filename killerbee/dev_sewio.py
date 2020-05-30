@@ -2,7 +2,7 @@
 # Sewio Open-Sniffer Radio Client
 # (product previously known as Wislab Sniffer)
 # This sniffer is a remote IPv4 host.
-# 
+#
 # (C) 2013 Ryan Speers <ryan at riverloopsecurity.com>
 #
 # For documentation from the vendor, visit:
@@ -13,13 +13,16 @@ import os
 import time
 import struct
 import time
-import urllib2
+try:
+    import urllib.request as urllib2
+except ImportError:
+    import urllib2
 import re
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR, timeout as error_timeout
 from struct import unpack
 
 from datetime import datetime, timedelta
-from kbutils import KBCapabilities, makeFCS, isIpAddr, KBInterfaceError
+from .kbutils import KBCapabilities, makeFCS, isIpAddr, KBInterfaceError
 
 DEFAULT_IP = "10.10.10.2"   #IP address of the sniffer
 DEFAULT_GW = "10.10.10.1"   #IP address of the default gateway
@@ -44,8 +47,8 @@ Similar code from Wireshark source:
 '''
 def ntp_to_system_time(secs, msecs):
     """convert a NTP time to system time"""
-    print "Secs:", secs, msecs
-    print "\tUTC:", datetime.utcfromtimestamp(secs - 2208988800)
+    print("Secs:", secs, msecs)
+    print("\tUTC:", datetime.utcfromtimestamp(secs - 2208988800))
     return datetime.utcfromtimestamp(secs - 2208988800)
 
 def getFirmwareVersion(ip):
@@ -55,7 +58,7 @@ def getFirmwareVersion(ip):
         if fw is not None:
             return fw.group(1)
     except Exception as e:
-        print("Unable to connect to IP {0} (error: {1}).".format(ip, e))
+        print(("Unable to connect to IP {0} (error: {1}).".format(ip, e)))
     return None
 
 def getMacAddr(ip):
@@ -71,7 +74,7 @@ def getMacAddr(ip):
             raise KBInterfaceError("Unable to parse the sniffer's MAC address.")
         return res.group(1)
     except Exception as e:
-        print("Unable to connect to IP {0} (error: {1}).".format(ip, e))
+        print(("Unable to connect to IP {0} (error: {1}).".format(ip, e)))
     return None
 
 def isSewio(dev):
@@ -95,8 +98,8 @@ class SEWIO:
         self._modulation = 0 #unknown, will be set by change channel currently
         self.handle = None
         self.dev = dev
-        
-        #TODO The receive port and receive IP address are currently not 
+
+        #TODO The receive port and receive IP address are currently not
         # obtained from or verified against the Sewio sniffer, nor are they
         # used to change the settings on the sniffer.
         self.udp_recv_port = recvport
@@ -104,7 +107,7 @@ class SEWIO:
 
         self.__revision_num = getFirmwareVersion(self.dev)
         if self.__revision_num not in TESTED_FW_VERS:
-            print("Warning: Firmware revision {0} reported by the sniffer is not currently supported. Errors may occur and dev_sewio.py may need updating.".format(self.__revision_num))
+            print(("Warning: Firmware revision {0} reported by the sniffer is not currently supported. Errors may occur and dev_sewio.py may need updating.".format(self.__revision_num)))
 
         self.handle = socket(AF_INET, SOCK_DGRAM)
         self.handle.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -113,7 +116,7 @@ class SEWIO:
         self.__stream_open = False
         self.capabilities = KBCapabilities()
         self.__set_capabilities()
-        
+
     def close(self):
         '''Actually close the receiving UDP socket.'''
         self.sniffer_off()  # turn sniffer off if it's currently running
@@ -178,7 +181,7 @@ class SEWIO:
 
     def __sync_status(self):
         '''
-        This updates the standard self.__stream_open variable based on the 
+        This updates the standard self.__stream_open variable based on the
         status as reported from asking the remote sniffer.
         '''
         self.__stream_open = self.__sniffer_status()
@@ -211,13 +214,13 @@ class SEWIO:
         '''
         self.capabilities.require(KBCapabilities.SNIFF)
 
-        # Because the Sewio just toggles, we have to only hit the page 
+        # Because the Sewio just toggles, we have to only hit the page
         # if we need to go from off to on state.
         self.__sync_status()
         if self.__stream_open == False:
             if channel != None:
                 self.set_channel(channel, page)
-            
+
             if not self.__make_rest_call('status.cgi?p=2', fetch=False):
                 raise KBInterfaceError("Error instructing sniffer to start capture.")
 
@@ -225,31 +228,31 @@ class SEWIO:
             self.__sync_status()
             if not self.__stream_open:
                 raise KBInterfaceError("Sniffer did not turn on capture.")
-                
+
     # KillerBee expects the driver to implement this function
     def sniffer_off(self):
         '''
         Turns the sniffer off.
         @rtype: None
         '''
-        # Because the Sewio just toggles, we have to only hit the page 
+        # Because the Sewio just toggles, we have to only hit the page
         # if we need to go from on to off state.
         self.__sync_status()
         if self.__stream_open == True:
             if not self.__make_rest_call('status.cgi?p=2', fetch=False):
                 raise KBInterfaceError("Error instructing sniffer to stop capture.")
-            
+
             #This makes sure the change actually happened
             self.__sync_status()
             if self.__stream_open:
                 raise KBInterfaceError("Sniffer did not turn off capture.")
-   
+
     #TODO: convert to channel/page for subghz
     @staticmethod
     def __get_default_modulation(channel, page=0):
         '''
         Return the Sewio-specific integer representing the modulation which
-        should be choosen to be IEEE 802.15.4 complinating for a given channel 
+        should be choosen to be IEEE 802.15.4 complinating for a given channel
         number.
         Captured values from sniffing Sewio web interface, unsure why these
         are done as such.
@@ -280,7 +283,7 @@ class SEWIO:
             curChannel = self.__sniffer_channel()
             if channel != curChannel:
                 self.modulation = self.__get_default_modulation(channel)
-                print("Setting to channel {0}, modulation {1}.".format(channel, self.modulation))
+                print(("Setting to channel {0}, modulation {1}.".format(channel, self.modulation)))
                 # Examples captured in fw v0.5 sniffing:
                 #   channel 6, 250 compliant: http://10.10.10.2/settings.cgi?chn=6&modul=c&rxsens=0
                 #   channel 12, 250 compliant: http://10.10.10.2/settings.cgi?chn=12&modul=0&rxsens=0
@@ -304,12 +307,12 @@ class SEWIO:
     @staticmethod
     def __parse_zep_v2(data):
         '''
-        Parse the packet from the ZigBee encapsulation protocol version 2/3 and 
+        Parse the packet from the ZigBee encapsulation protocol version 2/3 and
         return the fields desired for usage by pnext().
-        There is support here for some oddities specific to the Sewio 
-        implementation of ZEP and the packet, such as CC24xx format FCS 
+        There is support here for some oddities specific to the Sewio
+        implementation of ZEP and the packet, such as CC24xx format FCS
         headers being expected.
-        
+
         The ZEP protocol parsing is mainly based on Wireshark source at:
         http://anonsvn.wireshark.org/wireshark/trunk/epan/dissectors/packet-zep.c
         * ZEP v2 Header will have the following format (if type=1/Data):
@@ -331,12 +334,10 @@ class SEWIO:
             raise Exception("Can not parse provided data as ZEP due to incorrect preamble or unsupported version.")
         if zeptype == 1: #data
             (ch, devid, crcmode, lqival, ntpsec, ntpnsec, seqnum, length) = unpack(">BHBBIII10xB", data[4:32])
-            #print "Data ZEP:", ch, devid, crcmode, lqival, ntpsec, ntpnsec, seqnum, length
             #We could convert the NTP timestamp received to system time, but the
             # Sewio firmware uses "relative timestamping" where it begins at 0 each time
             # the sniffer is started. Thus, it isn't that useful to us, so we just add the
             # time the packet is received at the host instead.
-            #print "\tConverted time:", ntp_to_system_time(ntpsec, ntpnsec)
             recdtime = datetime.utcnow()
             #The LQI comes in ZEP, but the RSSI comes in the first byte of the FCS,
             # if the FCS was correct. If the byte is 0xb1, Wireshark appears to do 0xb1-256 = -79 dBm.
@@ -346,7 +347,7 @@ class SEWIO:
             #define IEEE802154_CC24xx_CRC_OK            0x8000
             #define IEEE802154_CC24xx_RSSI              0x00FF
             frame = data[32:]
-            # A length vs len(frame) check is not used here but is an 
+            # A length vs len(frame) check is not used here but is an
             #  additional way to verify that all is good (length == len(frame)).
             if crcmode == 0:
                 validcrc = ((ord(data[-1]) & 0x80) == 0x80)
@@ -394,10 +395,10 @@ class SEWIO:
                 continue
             # Dissect the UDP packet
             (frame, ch, validcrc, rssi, lqival, recdtime) = self.__parse_zep_v2(data)
-            print "Valid CRC", validcrc, "LQI", lqival, "RSSI", rssi
+            print("Valid CRC", validcrc, "LQI", lqival, "RSSI", rssi)
             if frame == None or (ch is not None and ch != self._channel):
                 #TODO this maybe should be an error condition, instead of ignored?
-                print("ZEP parsing issue (bytes length={0}, channel={1}).".format(len(frame) if frame is not None else None, ch))
+                print(("ZEP parsing issue (bytes length={0}, channel={1}).".format(len(frame) if frame is not None else None, ch)))
                 continue
             break
 
@@ -431,4 +432,3 @@ class SEWIO:
         @rtype: None
         '''
         self.capabilities.require(KBCapabilities.PHYJAM)
-

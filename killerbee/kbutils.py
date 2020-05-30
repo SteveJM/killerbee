@@ -1,3 +1,5 @@
+import sys
+
 # Import USB support depending on version of pyUSB
 try:
     import usb.core
@@ -7,11 +9,11 @@ try:
     USBVER=1
 except ImportError:
     import usb
-    #print("Warning: You are using pyUSB 0.x, future deprecation planned.")
     USBVER=0
 
 import serial
-import os, glob
+import os
+import glob
 import time
 import random
 import inspect
@@ -39,10 +41,11 @@ usbProductList = [RZ_USB_PROD_ID, ZN_USB_PROD_ID, CC2530_USB_PROD_ID, CC2531_USB
 # Global variables
 gps_devstring = None
 
+
 class KBCapabilities:
-    '''
+    """
     Class to store and report on the capabilities of a specific KillerBee device.
-    '''
+    """
     NONE               = 0x00 #: Capabilities Flag: No Capabilities
     SNIFF              = 0x01 #: Capabilities Flag: Can Sniff
     SETCHAN            = 0x02 #: Capabilities Flag: Can Set the Channel
@@ -58,6 +61,7 @@ class KBCapabilities:
     FREQ_868           = 0x0c #: Capabilities Flag: Can perform 868-876 MHz sniffing (ch 0-8)
     FREQ_870           = 0x0d #: Capabilities Flag: Can perform 870-876 MHz sniffing (ch 0-26)
     FREQ_915           = 0x0e #: Capabilities Flag: Can perform 915-917 MHz sniffing (ch 0-26)
+
     def __init__(self):
         self._capabilities = {
                 self.NONE : False,
@@ -75,19 +79,24 @@ class KBCapabilities:
                 self.FREQ_870: False,
                 self.FREQ_915: False,
                 self.BOOT: False }
+
     def check(self, capab):
         if capab in self._capabilities:
             return self._capabilities[capab]
         else:
             return False
+
     def getlist(self):
         return self._capabilities
+
     def setcapab(self, capab, value):
         self._capabilities[capab] = value
+
     def require(self, capab):
         if self.check(capab) != True:
             raise Exception('Selected hardware does not support required capability (%d).' % capab)
-    def frequency(self, channel= None, page= None):
+
+    def frequency(self, channel=None, page=None):
         '''
         Return actual frequency of channel/page in KHz
         '''
@@ -195,7 +204,7 @@ def devlist_usb_v1x(vendor=None, product=None):
     else:               vendor = [vendor]
     if product == None: product = usbProductList
     else:               product = [product]
-    devs = usb.core.find(find_all=True, custom_match=findFromList(vendor, product)) #backend=backend, 
+    devs = usb.core.find(find_all=True, custom_match=findFromList(vendor, product)) #backend=backend,
     try:
         for dev in devs:
             # Note, can use "{0:03d}:{1:03d}" to get the old format,
@@ -247,15 +256,15 @@ def isIpAddr(ip):
 
 def devlist(vendor=None, product=None, gps=None, include=None):
     '''
-    Return device information for all present devices, 
+    Return device information for all present devices,
     filtering if requested by vendor and/or product IDs on USB devices, and
     running device fingerprint functions on serial devices.
     @type gps: String
     @param gps: Optional serial device identifier for an attached GPS
-        unit. If provided, or if global variable has previously been set, 
+        unit. If provided, or if global variable has previously been set,
         KillerBee skips that device in device enumeration process.
     @type include: List of Strings
-    @param include: Optional list of device handles to be appended to the 
+    @param include: Optional list of device handles to be appended to the
         normally found devices. This is useful for providing IP addresses for
         remote scanners.
     @rtype: List
@@ -305,8 +314,8 @@ def devlist(vendor=None, product=None, gps=None, include=None):
                 devlist.append([ipaddr, "Sewio Open-Sniffer v{0}".format(dev_sewio.getFirmwareVersion(ipaddr)), dev_sewio.getMacAddr(ipaddr)])
             #NOTE: Enumerations of other IP connected sniffers go here.
             else:
-                print(("kbutils.devlist has an unknown type of IP sniffer device ({0}).".format(ipaddr)))
-    
+                print("kbutils.devlist has an unknown type of IP sniffer device ({0}).".format(ipaddr))
+
     return devlist
 
 def get_serial_devs(seriallist):
@@ -323,7 +332,7 @@ def get_serial_ports(include=None):
     interested in, aka USB serial devices using FTDI chips such as the TelosB,
     ApiMote, etc. This should handle returning a list of devices regardless of
     the *nix it is running on. Support for more *nix and winnt needed.
-    
+
     @type include: List of Strings, or None
     @param include: A list of device strings, of which any which appear to be
         serial device handles will be added to the set of serial ports returned
@@ -357,7 +366,6 @@ def isgoodfetccspi(serialdev):
         except serial.serialutil.SerialException as e:
             raise KBInterfaceError("Serial issue in kbutils.isgoodfetccspi: %s." % e)
         if gf.connected == 1:
-            #print "TelosB/Tmote attempts: found %s on %s" % (gf.identstr(), serialdev)
             # now check if ccspi app is installed
             out = gf.writecmd(gf.CCSPIAPP, 0, 0, None)
             gf.serClose()
@@ -373,7 +381,6 @@ def isgoodfetccspi(serialdev):
         except serial.serialutil.SerialException as e:
             raise KBInterfaceError("Serial issue in kbutils.isgoodfetccspi: %s." % e)
         if gf.connected == 1:
-            #print "ApiMotev2+ attempts: found %s on %s" % (gf.identstr(), serialdev)
             # now check if ccspi app is installed
             out = gf.writecmd(gf.CCSPIAPP, 0, 0, None)
             gf.serClose()
@@ -390,11 +397,9 @@ def isgoodfetccspi(serialdev):
             #       export board=apimote1; ./goodfet.ccspi info; ./goodfet.ccspi spectrum
             gf.serInit(port=serialdev, attemptlimit=4)
             #gf.setup()
-            #print "Found %s on %s" % (gf.identstr(), serialdev)
         except serial.serialutil.SerialException as e:
             raise KBInterfaceError("Serial issue in kbutils.isgoodfetccspi: %s." % e)
         if gf.connected == 1:
-            #print "ApiMotev1 attempts: found %s on %s" % (gf.identstr(), serialdev)
             # now check if ccspi app is installed
             out = gf.writecmd(gf.CCSPIAPP, 0, 0, None)
             gf.serClose()
@@ -423,10 +428,10 @@ def iszigduino(serialdev):
     if gf.connected == 1:
         out = gf.writecmd(gf.ATMELRADIOAPP, 0x10, 0, None)
         gf.serClose()
-        if (gf.app == gf.ATMELRADIOAPP) and (gf.verb == 0x10): #check if ATMELRADIOAPP exists           
+        if (gf.app == gf.ATMELRADIOAPP) and (gf.verb == 0x10): #check if ATMELRADIOAPP exists
             return True
     return False
-    
+
 def issl_nodetest(serialdev):
     '''
     Determine if a given serial device is a Silabs dev board NodeTest loaded (https://www.silabs.com/documents/public/application-notes/AN1019-NodeTest.pdf)
@@ -437,15 +442,15 @@ def issl_nodetest(serialdev):
     s = serial.Serial(port=serialdev, baudrate=115200, timeout=.1, bytesize=8, parity='N', stopbits=1, xonxoff=0)
     #time.sleep(.5)
     # send RX stop in case it was left running
-    s.write('\re\r')
+    s.write(b'\re\r')
     # get anything in the buffers
     for x in range(5):
         s.readline()
-    s.write('version\r')
+    s.write(b'version\r')
     version = None
     for i in range(5):
-        d= s.readline()
-        if 'Node Test Application' in d:
+        d = s.readline()
+        if b'Node Test Application' in d:
             version = d
             break
     s.close()
@@ -461,15 +466,15 @@ def issl_beehive(serialdev):
     s = serial.Serial(port=serialdev, baudrate=115200, timeout=.5, bytesize=8, parity='N', stopbits=1, xonxoff=0)
     #time.sleep(.5)
     # send RX stop in case it was left running
-    s.write('\rrx 0\r')
+    s.write(b'\rrx 0\r')
     # get anything in the buffers
     while s.in_waiting:
         d = s.readline()
-    s.write('\r')
+    s.write(b'\r')
     version = None
     for i in range(5):
-        d= s.readline()
-        if 'BeeHive SG' in d:
+        d = s.readline()
+        if b'BeeHive SG' in d:
             version = d
             break
     s.close()
@@ -484,27 +489,27 @@ def isfreakduino(serialdev):
     '''
     s = serial.Serial(port=serialdev, baudrate=57600, timeout=1, bytesize=8, parity='N', stopbits=1, xonxoff=0)
     time.sleep(1.5)
-    s.write('SC!V\r')
+    s.write(b'SC!V\r')
     time.sleep(1.5)
     #readline should take an eol argument, per:
     # http://pyserial.sourceforge.net/pyserial_api.html#serial.FileLike.readline
     # However, many got an "TypeError: readline() takes no keyword arguments" due to a pySerial error
     # So we have replaced it with a bruteforce method. Old: s.readline(eol='&')
     for i in range(100):
-        if (s.read() == '&'): break
-    if s.read(3) == 'C!V': version = s.read()
+        if (s.read() == b'&'): break
+    if s.read(3) == b'C!V': version = s.read()
     else: version = None
     s.close()
     return (version is not None)
 
 def search_usb(device):
-    '''
+    """
     Takes either None, specifying that any USB device in the
     global vendor and product lists are acceptable, or takes
     a string that identifies a device in the format
     <BusNumber>:<DeviceNumber>, and returns the pyUSB objects
     for bus and device that correspond to the identifier string.
-    '''
+    """
     if device == None:
         busNum = None
         devNum = None
@@ -518,11 +523,12 @@ def search_usb(device):
             dev = search_usb_bus_v0x(bus, busNum, devNum)
             if dev != None:
                 return (bus, dev)
-        return None #Note, can't expect a tuple returned
+        return None  # NOTE: can't expect a tuple returned
     elif USBVER == 1:
-        return usb.core.find(custom_match=findFromListAndBusDevId(busNum, devNum, usbVendorList, usbProductList)) #backend=backend, 
+        return usb.core.find(custom_match=findFromListAndBusDevId(busNum, devNum, usbVendorList, usbProductList)) #backend=backend,
     else:
         raise Exception("USB version expected to be 0.x or 1.x.")
+
 
 def search_usb_bus_v0x(bus, busNum, devNum):
     '''Helper function for USB enumeration in pyUSB 0.x enviroments.'''
@@ -533,9 +539,9 @@ def search_usb_bus_v0x(bus, busNum, devNum):
             if devNum == None:
                 return dev
             elif busNum == int(bus.dirname) and devNum == int(dev.filename):
-                #print "Choose device", bus.dirname, dev.filename, "to initialize KillerBee instance on."
                 return dev
     return None
+
 
 def hexdump(src, length=16):
     '''
@@ -546,7 +552,7 @@ def hexdump(src, length=16):
     @param length: Optional length of data for a single row of output, def=16
     @rtype: String
     '''
-    FILTER = ''.join([(len(repr(chr(x))) == 3) and chr(x) or '.' for x in range(256)])
+    FILTER = b''.join([(len(repr(chr(x))) == 3) and chr(x) or '.' for x in range(256)])
     result = []
     for i in range(0, len(src), length):
        chars = src[i:i+length]
@@ -554,6 +560,7 @@ def hexdump(src, length=16):
        printable = ''.join(["%s" % ((ord(x) <= 127 and FILTER[ord(x)]) or '.') for x in chars])
        result.append("%04x:  %-*s  %s\n" % (i, length*3, hex, printable))
     return ''.join(result)
+
 
 def randbytes(size):
     '''
@@ -564,12 +571,13 @@ def randbytes(size):
     '''
     return ''.join(chr(random.randrange(0,256)) for i in range(size))
 
+
 def randmac(length=8):
     '''
-    Returns a random MAC address using a list valid OUI's from ZigBee device 
+    Returns a random MAC address using a list valid OUI's from ZigBee device
     manufacturers.  Data is returned in air-format byte order (LSB first).
     @type length: String
-    @param length: Optional length of MAC address, def=8.  
+    @param length: Optional length of MAC address, def=8.
         Minimum address return length is 3 bytes for the valid OUI.
     @rtype: String
     @returns: A randomized MAC address in a little-endian byte string.
@@ -593,6 +601,7 @@ def randmac(length=8):
     # Reverse the address for use in a packet
     return ''.join([prefix, suffix])[::-1]
 
+
 def makeFCS(data):
     '''
     Do a CRC-CCITT Kermit 16bit on the data given
@@ -603,8 +612,7 @@ def makeFCS(data):
         little-endian order.
     '''
     crc = 0
-    for i in range(len(data)):
-        c = ord(data[i])
+    for c in bytearray(data):
         #if (A PARITY BIT EXISTS): c = c & 127	#Mask off any parity bit
         q = (crc ^ c) & 15				#Do low-order 4 bits
         crc = (crc // 16) ^ (q * 4225)
@@ -612,9 +620,11 @@ def makeFCS(data):
         crc = (crc // 16) ^ (q * 4225)
     return pack('<H', crc) #return as bytes in little endian order
 
+
 class KBException(Exception):
     '''Base class for all KillerBee specific exceptions.'''
     pass
+
 
 class KBInterfaceError(KBException):
     '''
@@ -634,11 +644,16 @@ def pyusb_1x_patch():
     have to ever pass this argument.
     '''
     if 'length' in inspect.getargspec(usb.util.get_string).args:
-        print('Monkey-patching usb.util.get_string()')
+        print('Monkey-patching usb.util.get_string()', file=sys.stderr)
         def get_string(dev, index, langid = None):
             return usb.util.zzz__get_string(dev, 255, index, langid)
         usb.util.zzz__get_string = usb.util.get_string
         usb.util.get_string = get_string
+
+
+def bytearray_to_bytes(b):
+    return b"".join(pack('B', value) for value in b)
+
 
 if USBVER == 1:
     pyusb_1x_patch()

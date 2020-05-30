@@ -11,7 +11,7 @@ All Rights Reserved.
 
 The main toolkit was/is authored by:
 + 2009, Joshua Wright <jwright@willhackforsushi.com>
-+ 2010-2018, Ryan Speers <ryan@riverloopsecurity.com>
++ 2010-2019, Ryan Speers <ryan@riverloopsecurity.com>
 + 2010-2011, Ricky Melgares <ricky@riverloopsecurity.com>
 
 We appreciate the many contributers to the framework, including the following who have contributed capabilities:
@@ -28,6 +28,7 @@ We appreciate the many contributers to the framework, including the following wh
 + Jeff Spielberg
 + Scytmo (bug fixes and CC2530/1 EMK board support)
 + Adam Laurie/rfidiot (APS crypto implementation, firmware, DFU & BOOTLOADER, SubGHZ, SiLabs NodeTest)
++ Steve Martin
 
 REQUIREMENTS
 ================
@@ -36,14 +37,8 @@ KillerBee is developed and tested on Linux systems.
 MacOS usage is possible but not supported.
 
 We have striven to use a minimum number of software dependencies, however, it
-is necessary to install the following Python modules before installation:
-
-+ serial
-+ usb
-+ crypto  (for some functions)
-+ pygtk   (for use of tools that have GUIs)
-+ cairo   (for use of tools that have GUIs)
-+ scapy (for some tools which utilize 802.15.4 Scapy extensions)
+is necessary to install the following Python modules before installation.
+The install will detect and prompt you for what is needed.
 
 On Ubuntu systems, you can install the needed dependencies with the following
 commands:
@@ -104,8 +99,7 @@ You must enable these to be searched for in `killerbee/config.py` and then reins
 
 ApiMote v4beta (and v3):
 ----------------
-The devices typically come preloaded and do not need to be reflashed for basic
-use.
+The devices typically come preloaded and do not need to be reflashed for basic use.
 
 The hardware is open-source at https://github.com/riverloopsec/apimote.
 It is available assembled by contacting team at riverloopsecurity dot com.
@@ -139,7 +133,7 @@ We have not tested nor do we endorse any specific "clone".
 Atmel RZ RAVEN USB Stick:
 ----------------
 See http://www.atmel.com/tools/RZUSBSTICK.aspx.
-This hardware 
+This hardware
 is convenient as the base firmware is open source with a freely-available IDE.
 The KillerBee firmware for the RZ RAVEN included in the `firmware/` directory is
 a modified version of the stock firmware distributed by Atmel to include
@@ -180,11 +174,9 @@ networks, built using the KillerBee framework.  Each tool has its own usage
 instructions documented by running the tool with the "-h" argument, and
 summarized below.
 
-
-+ kbbootloader -  Switches device into DFU/BOOTLOADER mode (if device is capable)
 + zbid         -  Identifies available interfaces that can be used by KillerBee
                 and associated tools.
-+ zbwireshark  -  Similar to zbdump but exposes a named pipe for real-time 
++ zbwireshark  -  Similar to zbdump but exposes a named pipe for real-time
                 capture and viewing in Wireshark.
 + zbdump       -  A tcpdump-like took to capture IEEE 802.15.4 frames to a libpcap
                 or Daintree SNA packet capture file.  Does not display real-time
@@ -214,8 +206,8 @@ summarized below.
                 a target device.  May be able to reset the device's PAN ID or Channel
 + zbfakebeacon  -  Spoofs beacon frames, either spamming them or on response to seeing
                 a beacon request come through.
-+ zbopenear    -  Assists in data capture where devices are operating on multiple 
-                channels or fast-frequency-hopping. It assigns multiple 
++ zbopenear    -  Assists in data capture where devices are operating on multiple
+                channels or fast-frequency-hopping. It assigns multiple
                 interfaces sequentially across all channels.
 + zbassocflood -  Repeatedly associate to the target PANID in an effort to cause
                 the device to crash from too many connected stations.
@@ -224,17 +216,15 @@ summarized below.
 + zbdsniff     -  Captures ZigBee traffic, looking for NWK frames and over-the-air
                 key provisioning.  When a key is found, zbdsniff prints the
                 key to stdout.  The sample packet capture
-                sample/zigbee-network-key-ota.dcf can be used to demonstrate
+                `sample/zigbee-network-key-ota.dcf` can be used to demonstrate
                 this functionality.
 + zbfind       -  A GTK GUI application for tracking the location of an IEEE
-                802.15.4 transmitter by measuring RSSI.  Zbfind can be passive
+                802.15.4 transmitter by measuring RSSI. zbfind can be passive
                 in discovery (only listen for packets) or it can be active by
                 sending Beacon Request frames and recording the responses from
                 ZigBee routers and coordinators.
                 If you get a bunch of errors after starting this tool, make
-                sure your DISPLAY variable is set properly.  If you know how
-                to catch these errors to display a reasonable error message,
-                please drop me a note.
+                sure your `DISPLAY` variable is set properly.
 + zbgoodfind   -  Implements a key search function using an encrypted packet
                 capture and memory dump from a legitimate ZigBee or IEEE
                 802.15.4 device.  This tool accompanies Travis Goodspeed's
@@ -244,13 +234,14 @@ summarized below.
                 must be in binary format (obj hexfile's are not supported). To
                 convert from the hexfile format to a binary file, use the
                 objcopy tool: objcopy -I ihex -O binary mem.hex mem.bin
-+ zbwardrive   -	Discovers available interfaces and uses one to inject beacon 
++ zbwardrive   -	Discovers available interfaces and uses one to inject beacon
                 requests and listen for respones across channels. Once a network
                 is found on a channel, it assigns another device to continuously
-                capture traffic on that channel to a PCAP file. Scapy must be 
+                capture traffic on that channel to a PCAP file. Scapy must be
                 installed to run this.
 + zbscapy      -  Provides an interactive Scapy shell for interacting via a
                 KillerBee interface. Scapy must be installed to run this.
++ kbbootloader -  Switches device into DFU/BOOTLOADER mode (if device is capable)
 
 Additional tools, that are for special cases or are not stable, are stored in
     the Api-Do project repository: http://code.google.com/p/zigbee-security/
@@ -264,7 +255,7 @@ interface or a supported packet capture file (libpcap or Daintree SNA), and for
 injecting arbitrary packets.  Helper functions including IEEE 802.15.4, ZigBee
 NWK and ZigBee APS packet decoders are available as well.
 
-The KillerBee API is documented in epydoc format, with HTML documentation in 
+The KillerBee API is documented in epydoc format, with HTML documentation in
 the doc/ directory of this distribution.  If you have epydoc installed, you can
 also generate a convenient PDF for printing, if desired, as shown:
 
@@ -291,8 +282,8 @@ QUESTIONS/COMMENTS/CONCERNS
 ==============
 Please use the ticketing system at https://github.com/riverloopsec/killerbee/issues.
 
-The original version was written by: jwright@willhackforsushi.com
-The current version, fixes, etc are handled by: ryan@riverloopsecurity.com
-Additional Tools/Fixes by: bryanhalf@gmail.com
+The original version was written by: jwright@willhackforsushi.com.
+The current version, fixes, etc are handled by: ryan@riverloopsecurity.com.
+(See the list above for all contributors/credits.)
 
-For contributors/developers, see DEVELOPMENT.md for details and guidance.
+For contributors/developers, see `DEVELOPMENT.md` for details and guidance.

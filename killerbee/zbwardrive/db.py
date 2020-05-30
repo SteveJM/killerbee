@@ -6,7 +6,7 @@ import string
 
 class ZBScanDB:
     """
-    API to interact with the "database" storing information 
+    API to interact with the "database" storing information
     for the zbscanning program.
     """
 
@@ -25,7 +25,7 @@ class ZBScanDB:
     # Returns the devid of a device marked 'Free',
     # or None if there are no Free devices in the DB.
     def get_devices_nextFree(self):
-        for devid, dev in self.devices.items():
+        for devid, dev in list(self.devices.items()):
             if dev[2] == 'Free':
                 return devid
 
@@ -51,20 +51,19 @@ class ZBScanDB:
     # Return the channel of the network identified by key,
     # or None if it doesn't exist in the DB.
     def get_networks_channel(self, key):
-        #print "Looking up channel for network with key of %s" % (key)
         for chan, data in self.channels:
             if data[0] == key: return chan
         return None
 
     def channel_status_logging(self, chan):
         '''
-        Returns False if we have not seen the network or are not currently 
+        Returns False if we have not seen the network or are not currently
         logging it's channel, and returns True if we are currently logging it.
         @return boolean
         '''
         if chan == None: raise Exception("None given for channel number")
         elif chan not in self.channels: raise Exception("Invalid channel")
-        for dev in self.devices.values():
+        for dev in list(self.devices.values()):
             if dev[3] == chan and dev[2] == 'Capture':
                 return True
         return False
@@ -72,4 +71,3 @@ class ZBScanDB:
 
 def toHex(bin):
     return ''.join(["%02x" % ord(x) for x in bin])
-

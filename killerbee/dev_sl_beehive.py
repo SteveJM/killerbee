@@ -3,14 +3,13 @@ Support for the Silabs based version of "BeeHive" SNIFFER/ INJECTOR firmware
 Author: Adam Laurie <adam@algroup.co.uk> aka RFIDiot
 
 '''
-
 import usb
 import serial
 import time
 import struct
 from datetime import datetime, date
 from datetime import time as dttime
-from kbutils import KBCapabilities, makeFCS
+from .kbutils import KBCapabilities, makeFCS
 
 MODE_NONE    = 0x01
 MODE_SNIFF   = 0x02
@@ -76,10 +75,10 @@ class SL_BEEHIVE:
         '''
         return [self.dev, "BeeHive SG", ""]
 
-    def __send_cmd(self, cmdstr, arg=None, confirm= True, send_return= True, extra_delay= 0):
+    def __send_cmd(self, cmdstr, arg=None, confirm= True, send_return= True, extra_delay= 0, initial_read= 3):
         # read any cruft
         #time.sleep(0.1)
-        for x in range(3):
+        for x in range(initial_read):
             self.handle.readline()
 
         # some commands require us to be in idle, so do it always
@@ -94,13 +93,11 @@ class SL_BEEHIVE:
         if send_return:
             self.handle.write('\r')
         #time.sleep(0.1)
-        #print "Sent %s" % (cmdstr)
         time.sleep(extra_delay)
         if confirm:
             ret= False
             for x in range(100):
                 d= self.handle.readline().strip()
-                #print 'got', d
                 if d[-1:] == '>':
                     ret= True
                     break
@@ -160,7 +157,6 @@ class SL_BEEHIVE:
             self.__send_cmd("rx", "1", confirm= False)
             for x in range(5):
                 d = self.handle.readline()
-                #print 'got', d
                 if 'Rx:Enabled' in d:
                     self.mode = MODE_SNIFF
                     self.__stream_open = True
@@ -176,10 +172,11 @@ class SL_BEEHIVE:
         close().
         @rtype: None
         '''
-        self.__send_cmd("rx", "0", confirm= False)
-        for x in range(5):
+        # reset timeout as sniffer has made it long
+        self.handle.timeout= 0.2
+        self.__send_cmd("rx", "0", confirm= False, initial_read= 0)
+        for x in range(3):
             d= self.handle.readline().strip()
-            #print 'got', d
             if "Rx:Disabled" in d:
                 self.mode = MODE_NONE
                 self.__stream_open = False
@@ -246,25 +243,23 @@ class SL_BEEHIVE:
         if channel != None or page:
             self.set_channel(channel, page)
 
-        # 
         self.__send_cmd("setTxLength", "%d" % len(packet))
         maxp = 118
         # we can send max 256 bytes over the wire so we must split large packets due to hex doubling the size
         if len(packet) > maxp:
             tosend = maxp
         else:
-            tosend = len(packet) 
+            tosend = len(packet)
         self.__send_cmd("setTxPayload", "00 %02x%s" % ((len(packet)), packet[:tosend].encode('hex')))
         if len(packet) > maxp:
             self.__send_cmd("setTxPayload", "%d %s" % (tosend + 1, packet[tosend:].encode('hex')))
-        #print 'sending', len(packet), 'bytes:', packet.encode('hex')
         for pnum in range(0, count):
             self.__send_cmd("tx", "1", confirm= False)
             time.sleep(delay)
 
     # KillerBee expects the driver to implement this function
     #TODO I suspect that if you don't call this often enough while getting frames, the serial buffer may overflow.
-    def pnext(self, timeout=100):
+    def pnext(self, timeout=1):
         '''
         Returns packet data as a string, else None.
         @type timeout: Integer
@@ -278,20 +273,18 @@ class SL_BEEHIVE:
 
         self.handle.timeout=timeout         # Allow pySerial to handle timeout
         packet = self.handle.readline().strip()
-        #print 'reading'
         if packet == '':
             return None   # Sense timeout case and return
 
-        #print packet
         rssi, frame, validcrc = self.__dissect_pkt(packet)
         if not frame:
-            print "Error parsing stream received from device:", packet
+            print("Error parsing stream received from device:", packet)
 
         # Parse received data as <rssi>!<time>!<packtlen>!<frame>
         try:
             rssi = int(rssi)
         except:
-            print "Error parsing stream received from device:", packet
+            print("Error parsing stream received from device:", packet)
             return None
         #Return in a nicer dictionary format, so we don't have to reference by number indicies.
         #Note that 0,1,2 indicies inserted twice for backwards compatibility.

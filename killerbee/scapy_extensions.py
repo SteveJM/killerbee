@@ -12,10 +12,11 @@ from scapy.packet import Gen, Raw
 from scapy.all import *
 # This line will allow KillerBee's pcap reader to overwrite scapy's reader that is imported on the
 # above line, per suggestion from cutaway at https://code.google.com/p/killerbee/issues/detail?id=28:
+
 from killerbee import *
 
 import os, time, struct
-from kbutils import randmac
+from .kbutils import randmac
 
 import logging
 log_killerbee = logging.getLogger('scapy.killerbee')
@@ -79,7 +80,7 @@ def __kb_recv(kb, count = 0, store = 1, prn = None, lfilter = None, stop_filter 
             packet = kb.pnext() # int(remain * 1000) to convert to seconds
             if packet == None: continue
             if verbose > 1:
-                os.write(1, "*")
+                os.write(1, b"*")
             packet = Dot15d4(packet[0])
             if lfilter and not lfilter(packet):
                 continue
@@ -135,7 +136,7 @@ def kbsendp(pkt, channel = None, inter = 0, loop = 0, iface = None, count = None
 
     pkts_out = __kb_send(kb, pkt, inter = inter, loop = loop, count = count, verbose = verbose, realtime = realtime)
     if verbose:
-        print "\nSent %i packets." % pkts_out
+        print("\nSent %i packets." % pkts_out)
     kb.close()
 
 @conf.commands.register
@@ -179,11 +180,11 @@ def kbsrp(pkt, channel = None, page = 0, inter = 0, count = 0, iface = None, sto
 
     pkts_out = __kb_send(kb, pkt, inter = inter, loop = 0, count = None, verbose = verbose, realtime = realtime)
     if verbose:
-        print "\nSent %i packets." % pkts_out
+        print("\nSent %i packets." % pkts_out)
 
     pkts_in = __kb_recv(kb, count = count, store = store, prn = prn, lfilter = lfilter, verbose = verbose, timeout = timeout)
     if verbose:
-        print "\nReceived %i packets." % len(pkts_in)
+        print("\nReceived %i packets." % len(pkts_in))
     return plist.PacketList(pkts_in, 'Results')
 
 @conf.commands.register
@@ -239,28 +240,35 @@ def kbrdpcap(filename, count = -1, skip = 0, nofcs=False):
     if count > 0:
         count += skip
 
-    while 1:
-        packet = cap.pnext()
-        packetcount += 1
-        if packet[1] == None:
-            break
-        if skip > 0 and packetcount <= skip:
-            continue
-        if nofcs: packet = Dot15d4(packet[1])
-        else:     packet = Dot15d4FCS(packet[1])
-        lst.append(packet)
-        if count > 0 and packetcount >= count:
-            break
-    return plist.PacketList(lst, os.path.basename(filename))
+    try:
+        while 1:
+            packet = cap.pnext()
+            packetcount += 1
+            if packet[1] == None:
+                break
+            if skip > 0 and packetcount <= skip:
+                continue
+            if nofcs:
+                lst.append(Dot15d4(packet[1]))
+            else:
+                lst.append(Dot15d4FCS(packet[1]))
+            if count > 0 and packetcount >= count:
+                break
+    except StopIteration:
+        pass
+    finally:
+        cap.close()
+    return PacketList(lst, os.path.basename(filename))
 
 @conf.commands.register
 def kbwrpcap(save_file, pkts):
     """
     Write a pcap using the KillerBee library.
     """
+    from killerbee.pcapdlt import DLT_IEEE802_15_4
     pd = PcapDumper(DLT_IEEE802_15_4, save_file, ppi=False)
     for packet in pkts:
-        pd.pcap_dump(str(packet))
+        pd.pcap_dump(bytes(packet))
     pd.close()
 
 @conf.commands.register
@@ -293,7 +301,7 @@ def kbwrdain(save_file, pkts):
     """
     dt = DainTreeDumper(save_file)
     for packet in pkts:
-        dt.pwrite(str(packet))
+        dt.pwrite(bytes(packet))
     dt.close()
 
 @conf.commands.register
@@ -315,9 +323,9 @@ def kbkeysearch(packet, searchdata, ispath = True, skipfcs = True, raw = False):
     while (offset < (searchdatalen - 16)):
         if d.decrypt(packet, searchdata[offset:offset+16]) != '':
             if raw:
-                return ''.join(searchdata[offset + i] for i in xrange(0, 16))
+                return ''.join(searchdata[offset + i] for i in range(0, 16))
             else:
-                return ':'.join("%02x" % ord(searchdata[offset + i]) for i in xrange(0, 16))
+                return ':'.join("%02x" % ord(searchdata[offset + i]) for i in range(0, 16))
         else:
             offset+=1
     return None
@@ -330,7 +338,7 @@ def kbgetnetworkkey(pkts):
     if not isinstance(pkts, Gen):
         pkts = SetGen(pkts)
     for packet in pkts:
-        packet = str(packet)
+        packet = bytes(packet)
         zmac = Dot154PacketParser()
         znwk = ZigBeeNWKPacketParser()
         zaps = ZigBeeAPSPacketParser()
@@ -389,9 +397,9 @@ def kbgetnetworkkey(pkts):
             dst_mac_bytes = []
             src_mac_bytes = []
             key = {}
-            key['key'] = ':'.join("%02x" % ord(networkkey[x]) for x in xrange(16))
-            key['dst'] = ':'.join("%02x" % ord(destaddr[x]) for x in xrange(8))
-            key['src'] = ':'.join("%02x" % ord(srcaddr[x]) for x in xrange(8))
+            key['key'] = ':'.join("%02x" % ord(networkkey[x]) for x in range(16))
+            key['dst'] = ':'.join("%02x" % ord(destaddr[x]) for x in range(8))
+            key['src'] = ':'.join("%02x" % ord(srcaddr[x]) for x in range(8))
             return key
         except:
             continue
@@ -454,7 +462,7 @@ def kbdecrypt(source_pkt, key = None, verbose = None, doMicCheck = False):
     crop_size = len(pkt.mic) + len(pkt.data)
 
     # create NONCE (for crypt) and zigbeeData (for MIC) according to packet type
-    sec_ctrl_byte = str(pkt[ZigbeeSecurityHeader])[0]
+    sec_ctrl_byte = bytes(pkt[ZigbeeSecurityHeader])[0:1]
     if ZigbeeAppDataPayload in pkt:
         nonce = struct.pack('L',source_pkt[ZigbeeNWK].ext_src)+struct.pack('I',source_pkt[ZigbeeSecurityHeader].fc) + sec_ctrl_byte
         zigbeeData = pkt[ZigbeeAppDataPayload].do_build()
@@ -467,13 +475,13 @@ def kbdecrypt(source_pkt, key = None, verbose = None, doMicCheck = False):
     (payload, micCheck) = zigbee_crypt.decrypt_ccm(key, nonce, pkt.mic, encrypted, zigbeeData)
 
     if verbose > 2:
-        print "Decrypt Details:"
-        print "\tKey:            " + key.encode('hex')
-        print "\tNonce:          " + nonce.encode('hex')
-        print "\tZigbeeData:     " + zigbeeData.encode('hex')
-        print "\tDecrypted Data: " + payload.encode('hex')
-        print "\tEncrypted Data: " + encrypted.encode('hex')
-        print "\tMic:            " + pkt.mic.encode('hex')
+        print("Decrypt Details:")
+        print("\tKey:            " + key.encode('hex'))
+        print("\tNonce:          " + nonce.encode('hex'))
+        print("\tZigbeeData:     " + zigbeeData.encode('hex'))
+        print("\tDecrypted Data: " + payload.encode('hex'))
+        print("\tEncrypted Data: " + encrypted.encode('hex'))
+        print("\tMic:            " + pkt.mic.encode('hex'))
 
     frametype = pkt[ZigbeeNWK].frametype
     if frametype == 0 and micCheck == 1:
@@ -535,7 +543,7 @@ def kbencrypt(source_pkt, data, key = None, verbose = None):
         decrypted = data
 
     # create NONCE (for crypt) and zigbeeData (for MIC) according to packet type
-    sec_ctrl_byte = str(pkt[ZigbeeSecurityHeader])[0]
+    sec_ctrl_byte = bytes(pkt[ZigbeeSecurityHeader])[0:1]
     if ZigbeeAppDataPayload in pkt:
         nonce = struct.pack('L',source_pkt[ZigbeeNWK].ext_src)+struct.pack('I',source_pkt[ZigbeeSecurityHeader].fc) + sec_ctrl_byte
         zigbeeData = pkt[ZigbeeAppDataPayload].do_build()
@@ -551,13 +559,13 @@ def kbencrypt(source_pkt, data, key = None, verbose = None):
     (payload, mic) = zigbee_crypt.encrypt_ccm(key, nonce, miclen, decrypted, zigbeeData)
 
     if verbose > 2:
-        print "Encrypt Details:"
-        print "\tKey:            " + key.encode('hex')
-        print "\tNonce:          " + nonce.encode('hex')
-        print "\tZigbeeData:     " + zigbeeData.encode('hex')
-        print "\tDecrypted Data: " + decrypted.encode('hex')
-        print "\tEncrypted Data: " + payload.encode('hex')
-        print "\tMic:            " + mic.encode('hex')
+        print("Encrypt Details:")
+        print("\tKey:            " + key.encode('hex'))
+        print("\tNonce:          " + nonce.encode('hex'))
+        print("\tZigbeeData:     " + zigbeeData.encode('hex'))
+        print("\tDecrypted Data: " + decrypted.encode('hex'))
+        print("\tEncrypted Data: " + payload.encode('hex'))
+        print("\tMic:            " + mic.encode('hex'))
 
     # According to comments in e.g. https://github.com/wireshark/wireshark/blob/master/epan/dissectors/packet-zbee-security.c nwk_seclevel is not used any more but
     # we should reconstruct and return what was asked for anyway.

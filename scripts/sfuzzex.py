@@ -27,5 +27,4 @@ kb.set_channel(26)
 
 while s_mutate():
     kb.inject(s_render())
-    print hexdump(s_render())
-
+    print(hexdump(s_render()))
