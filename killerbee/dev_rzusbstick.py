@@ -527,7 +527,8 @@ class RZUSBSTICK:
             # packet data
             # self.__usb_write(RZ_USB_COMMAND_EP, [RZ_CMD_INJECT_FRAME, len(packet)] + packet)
 
-            self.__usb_write(RZ_USB_COMMAND_EP, [RZ_CMD_INJECT_FRAME, len(packet)] + list(bytes(packet, 'latin-1')))
+            #self.__usb_write(RZ_USB_COMMAND_EP, [RZ_CMD_INJECT_FRAME, len(packet)] + list(bytes(packet, 'latin-1')))
+            self.__usb_write(RZ_USB_COMMAND_EP, struct.pack("BB", RZ_CMD_INJECT_FRAME, len(packet)) + bytes(packet, 'latin-1'))
             time.sleep(delay)
 
     # KillerBee expects the driver to implement this function

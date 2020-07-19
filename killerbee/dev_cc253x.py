@@ -259,6 +259,9 @@ class CC253x:
                         'validcrc':validcrc, 'rssi':rssi, 'lqi':correlation,
                         'dbm':rssi,'datetime':datetime.utcnow()}
 
+                print("ValidCRC: {0}".format(validcrc))
+                print("Supplied: {0}".format(payload[-2:]))
+                print("Calculated: {0}".format(makeFCS(payload[:-2])))
                 # Convert the framedata to a string for the return value, and replace the TI FCS with a real FCS
                 # if the radio told us that the FCS had passed validation.
                 if validcrc:

@@ -6,9 +6,12 @@ Support for the Raspbee hardware plugged into a Raspberry Pi host where KillerBe
 
 import serial
 import struct
+import sys
 from datetime import datetime
-from kbutils import KBCapabilities, makeFCS
+from .kbutils import KBCapabilities, makeFCS
+from scapy.layers.dot15d4 import Dot15d4FCS, conf
 
+conf.dot15d4_protocol = 'zigbee'
 
 CMD_OFF = 0x30
 CMD_RX = 0x31
@@ -47,8 +50,9 @@ class Raspbee:
 
         self.state = STATE_OFF
         # NOTE: handle now called serial for now here:
-        self.serial = serial.Serial(self.dev, DEFAULT_BAUD_RATE, timeout=1)
+        self.serial = serial.Serial(self.dev, DEFAULT_BAUD_RATE, timeout=1, inter_byte_timeout=0.5)
         self.serial.write(bytearray(struct.pack("B", CMD_OFF)))
+        self.serial.flush()
 
         self.__stream_open = False
         self.capabilities = KBCapabilities()
@@ -56,6 +60,7 @@ class Raspbee:
 
     def close(self):
         # TODO
+        self.serial.close()
         self.handle = None
 
     def check_capability(self, capab):
@@ -97,9 +102,10 @@ class Raspbee:
         '''
         self.capabilities.require(KBCapabilities.SNIFF)
 
-        if self.state != STATE_RX:
-            self.serial.write(bytearray(struct.pack("B", CMD_RX)))
-            self.state = STATE_RX
+        #if self.state != STATE_RX:
+        self.serial.write(bytearray(struct.pack("B", CMD_RX)))
+        self.serial.flush()
+        self.state = STATE_RX
 
         if channel != None:
             self.set_channel(channel, page)
@@ -116,6 +122,7 @@ class Raspbee:
         @rtype: None
         '''
         self.serial.write(bytearray(struct.pack("B", CMD_OFF)))
+        self.serial.flush()
         self.__stream_open = False
 
     # KillerBee expects the driver to implement this function
@@ -129,14 +136,22 @@ class Raspbee:
         @rtype: None
         '''
         self.capabilities.require(KBCapabilities.SETCHAN)
+        # Discard any "old" data.
+        self.serial.reset_input_buffer()
 
-        if channel >= 11 or channel <= 26:
+        if channel >= 11 and channel <= 26:
             self.serial.write(bytearray(struct.pack("BB", CMD_SET_CHANNEL, channel)))
+            self.serial.flush()
             self._channel = channel
         else:
             raise Exception('Invalid channel')
         if page:
             raise Exception('SubGHz not supported')
+
+        # This seems to be necesary, but I don't know why?
+        self.serial.write(bytearray(struct.pack("B", CMD_RX)))
+        self.serial.flush()
+        self.state = STATE_RX
 
     # KillerBee expects the driver to implement this function
     def inject(self, packet, channel=None, count=1, delay=0, page=0):
@@ -167,8 +182,9 @@ class Raspbee:
         #self.handle.RF_autocrc(1)               #let radio add the CRC
         for pnum in range(0, count):
             #if not Dot15d4FCS in packet:
-            #    packet = packet + b'00'
-            self.serial.write(struct.pack("BB", CMD_TX, len(packet)) + bytes(packet))
+            self.serial.write(struct.pack("BB", CMD_TX, len(packet) +2) + bytes(packet, "latin-1") + makeFCS(bytes(packet, "latin-1")))
+            self.serial.flush()
+            self.state = STATE_TX
 
     # KillerBee expects the driver to implement this function
     def pnext(self, timeout=100):
@@ -179,62 +195,94 @@ class Raspbee:
         @rtype: List
         @return: Returns None is timeout expires and no packet received.  When a packet is received, a dictionary is returned with the keys bytes (string of packet bytes), validcrc (boolean if a vaid CRC), rssi (unscaled RSSI), and location (may be set to None). For backwards compatibility, keys for 0,1,2 are provided such that it can be treated as if a list is returned, in the form [ String: packet contents | Bool: Valid CRC | Int: Unscaled RSSI ]
         '''
-        if self.__stream_open == False:
-            self.sniffer_on()  # start sniffing
+        # if self.__stream_open == False:
+        #     self.sniffer_on()  # start sniffing
+        #if self.state != STATE_RX:
+        self.serial.write(bytearray(struct.pack("B", CMD_RX)))
+        self.serial.flush()
+        self.state = STATE_RX
 
-        packet = None
+        ret = dict()
         start = datetime.utcnow()
 
         #while (packet is None and (start + timedelta(microseconds=timeout) > datetime.utcnow())):
         rssi = None
 
-        length = self.serial.read()
-        if len(length) > 0:
-            intLength = int.from_bytes(length, "big")
+        try:
+            length = self.serial.read()
+            if len(length) > 0:
+                if (len(length) == 1):
+                    intLength = ord(length)
+                else:
+                    intLength = struct.unpack('>i', length)[0]
 
-            if intLength > 127:
-                if intLength == 0xff:
-                    next_byte = self.serial.read()
-                    if len(next_byte) > 0:
-                        next_length = int.from_bytes(next_byte, "big")
-                        message = self.serial.read(next_length)
-                        print("DEBUG: " + str(message))
-                elif intLength == 0xf0:
-                    rssi = self.serial.read()  # TODO calibrate
-                    next_length = self.serial.read()
-                    next_length_int = int.from_bytes(next_length, "big")
-                    packet = self.serial.read(next_length_int)
-                    if next_length_int < 2:
-                        return None
+                if intLength > 127:
+                    if intLength == 0xff:
+                        next_byte = self.serial.read()
+                        if len(next_byte) > 0:
+                            if len(next_byte) == 1:
+                                next_length = ord(next_byte)
+                            else:
+                                next_length = struct.unpack('>i', next_byte)[0]
+                            message = self.serial.read(next_length)
+                            return None
+                    elif intLength == 0xf0:
+                        rssi = self.serial.read()  # TODO calibrate
+                        next_length = self.serial.read()
+                        if len(next_length) == 1:
+                            next_length_int = ord(next_length)
+                        else:
+                            next_length_int = struct.unpack('>i', next_length)[0]
+                        packet = self.serial.read(next_length_int)
+                        if len(packet) != next_length_int:
+                            return None
 
-                    if STATE_RX_WMETADATA:
-                        pass  # success state
-                    else:
-                        return None
+                        if STATE_RX_WMETADATA:
+                            result = dict()
+                            result["rssi"] = rssi
+                            result[0] = packet[:-1].decode('latin-1')
+                            result[1] = True   # TODO: Calculate
+                            result["frame"] = Dot15d4FCS(packet)
+                            return result
+                        else:
+                            return None
+                    return None
+
+                packet = self.serial.read(intLength)
+                if len(packet) != intLength or intLength < 3:
+                    return None
+
+                if self.state == STATE_RX_WMETADATA:
+                    return None
+                
+                try:
+                    pkt = Dot15d4FCS(packet)
+                    ret[0] = packet[:-1].decode('latin-1')
+                    ret[1] = True  # TODO: Calculate
+                    ret['bytes'] = ret[0]
+                    return ret
+                except Exception as e:
+                    return None
+            else:
                 return None
 
-            packet = self.serial.read(intLength)
-
-            if intLength <= 2:
+            if packet is None:
                 return None
 
-            if self.state == STATE_RX_WMETADATA:
-                return None
-        else:
+            frame = packet[1:]
+            if frame[-2:] == makeFCS(frame[:-2]): validcrc = True
+            else: validcrc = False
+            #Return in a nicer dictionary format, so we don't have to reference by number indicies.
+            #Note that 0,1,2 indicies inserted twice for backwards compatibility.
+            result = {0:frame, 1:validcrc, 2:rssi, 'bytes':frame, 'validcrc':validcrc, 'rssi':rssi, 'location':None}
+            if rssi is not None:
+                result['dbm'] = rssi - 45 #TODO tune specifically to the platform
+            result['datetime'] = datetime.utcnow()
+            return result
+        except serial.serialutil.SerialException as se:
+            # We seem to get occasional serial errors, so just swallow them
+            #traceback.print_exc(file=sys.stdout)
             return None
-
-        if packet is None:
-            return None
-
-        frame = packet[1:]
-        if frame[-2:] == makeFCS(frame[:-2]): validcrc = True
-        else: validcrc = False
-        #Return in a nicer dictionary format, so we don't have to reference by number indicies.
-        #Note that 0,1,2 indicies inserted twice for backwards compatibility.
-        result = {0:frame, 1:validcrc, 2:rssi, 'bytes':frame, 'validcrc':validcrc, 'rssi':rssi, 'location':None}
-        result['dbm'] = rssi - 45 #TODO tune specifically to the platform
-        result['datetime'] = datetime.utcnow()
-        return result
  
     def ping(self, da, panid, sa, channel=None, page=0):
         '''
